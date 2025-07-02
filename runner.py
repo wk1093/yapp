@@ -77,15 +77,21 @@ def run_test(test, test_dir):
                 log_file.write(str(e))
                 print(f"{RED}[FAILED]{RESET} {test_dir}", flush=True)
     elif "check" in test_code[0]:
+        nocompile = any(line.lstrip().startswith("@nocompile") for line in test_code)
         with open(os.path.join(test_dir, "check.log"), 'w') as log_file:
             print(f"{test_line_info} check... ", end='')
             log_file.write(f"Starting compilation for check...\nTest source: {test[0]} line {test[2]}\n")
+            compile_failed = False
             try:
                 subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful for check.\n")
             except subprocess.CalledProcessError as e:
                 log_file.write("An error occurred during compilation for check.\n")
                 log_file.write(str(e))
+                compile_failed = True
+            if compile_failed and not nocompile:
+                print(f"{RED}[FAILED: Compilation error]{RESET} {test_dir}", flush=True)
+                return
             # Prepare conditions and file contents before error handling
             conditions = []
             for line in test_code:
@@ -125,7 +131,10 @@ def run_test(test, test_dir):
                     all_conditions_met = False
             if all_conditions_met:
                 log_file.write("All conditions met.\n")
-                print(f"{GREEN}[OK]{RESET}", flush=True)
+                if compile_failed:
+                    print(f"{YELLOW}[NOCOMPILE]{RESET} {test_dir}", flush=True)
+                else:
+                    print(f"{GREEN}[OK]{RESET}", flush=True)
             else:
                 log_file.write("Not all conditions were met.\n")
                 print(f"{RED}[FAILED: Conditions not met]{RESET} {test_dir}", flush=True)

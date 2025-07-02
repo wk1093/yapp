@@ -5,6 +5,7 @@
 #include <cstddef>
 
 @test check
+@nocompile
 @c "std::vector" in h
 @c "std::vector" not in c
 
