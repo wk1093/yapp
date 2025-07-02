@@ -13,7 +13,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 find_package(Clang REQUIRED CONFIG)
 
 # You can use Clang::clang-c for libclang C API
-add_executable(yappc src/main.cpp)
+add_executable(yappc src/main.cpp src/decl_utils.cpp src/file_writer.cpp src/visitor.cpp)
 
 target_include_directories(yappc PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(yappc PRIVATE
