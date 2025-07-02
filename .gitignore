@@ -4,3 +4,4 @@ build/
 *.gen.h
 *.p.xpp
 *.elf
+test_output/

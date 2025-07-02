@@ -230,9 +230,9 @@ std::string makeDeclaration(const std::string& code) {
     return trimmed;
 }
 
-void writeFiles(const std::string& base) {
-    std::ofstream hfile(base + ".gen.h");
-    std::ofstream cppfile(base + ".gen.cpp");
+void writeFiles(const std::string& base, const std::string& dir) {
+    std::ofstream hfile(dir + base + ".gen.h");
+    std::ofstream cppfile(dir + base + ".gen.cpp");
 
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
@@ -495,13 +495,17 @@ int main(int argc, char** argv) {
     size_t dot = base.find_last_of('.');
     std::string filename = base.substr(slash == std::string::npos ? 0 : slash + 1, dot - (slash == std::string::npos ? 0 : slash + 1));
 
-    writeFiles(filename);
+    // get directory of the input file
+    std::string dir = (slash == std::string::npos) ? "./" :
+                        base.substr(0, slash + 1);
+
+    writeFiles(filename, dir);
 
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
 
     // Compile the generated files
-    std::string compileCommand = "clang++ \"" + filename + ".gen.cpp\" ";
+    std::string compileCommand = "clang++ \"" + dir + filename + ".gen.cpp\" ";
     for (const auto& arg : compileArgs) {
         compileCommand += "\"" + arg + "\" ";
     }

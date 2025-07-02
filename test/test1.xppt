@@ -1,4 +1,4 @@
-@test compile // make sure the code compiles
+@test compile
 
 #include <cstdio>
 
@@ -14,7 +14,7 @@ pub int main() {
 
 namespace testing {
     pub void test() {
-        printf("Hello from Testing!\n");
+        printf("Hello from Testing!\n");    
     }
 }
 
@@ -24,9 +24,43 @@ pub int main() {
 }
 
 @test check
-@h !h.contains("testfunction")
-@c c.contains("testfunction")
+@c "testfunction" not in h
+@c "testfunction" in c
 
 priv void testfunction() {
-    printf("This is a private function.\n");
+    
 }
+
+@test check
+@c "testfunction" in h
+@c "testfunction" in c
+
+pub void testfunction() {
+
+}
+
+@test check
+@c "testfunction" in h
+@c "testfunction" in c
+
+void testfunction() {
+
+}
+
+@test check
+@c "testfunction" in h
+@c "testfunction" not in c
+
+pub void testfunction();
+
+@test check
+@c "testfunction" not in h
+@c "testfunction" in c
+
+priv void testfunction();
+
+@test check
+@c "testfunction" in h
+@c "testfunction" not in c
+
+void testfunction();
