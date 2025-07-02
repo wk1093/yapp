@@ -1,0 +1,11 @@
+@test check
+@c "myenum" in h
+@c "myenum" not in c
+
+enum myenum { A, B, C };
+
+@test check
+@c "myunion" in h
+@c "myunion" not in c
+
+union myunion { int a; float b; };

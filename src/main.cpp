@@ -6,6 +6,39 @@
 #include <fstream>
 #include <sstream>
 #include <cstring>
+#include <regex>
+
+std::vector<std::string> preprocStored;
+
+std::string prePreprocess(const std::string& inputFile) {
+    std::ifstream in(inputFile);
+    if (!in) {
+        std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
+        exit(1);
+    }
+    std::ostringstream out;
+    std::string line;
+
+    std::regex pubPreproc(R"(^\s*#pub\s+(.*?)$)");
+    while (std::getline(in, line)) {
+        std::smatch m;
+        if (std::regex_search(line, m, pubPreproc)) {
+            preprocStored.push_back(m[1].str());
+            out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
+        }else {
+            out << line << "\n";
+        }
+    }
+    std::string outFile = inputFile + ".pubpp";
+    std::ofstream pubpp(outFile);
+    if (!pubpp) {
+        std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
+        exit(1);
+    }
+    pubpp << out.str();
+    pubpp.close();
+    return outFile;
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -28,8 +61,10 @@ int main(int argc, char** argv) {
         }
     }
 
+    // pre-preprocessor step
+    std::string pubppFile = prePreprocess(argv[1]);
     // preprocessor step
-    std::string preprocOutputFile = argv[1];
+    std::string preprocOutputFile = pubppFile;
     if (preprocOutputFile.find(".yapp") == std::string::npos) {
         std::cerr << "Input file must have .yapp extension.\n";
         return 1;
@@ -41,7 +76,7 @@ int main(int argc, char** argv) {
     }
     preprocCommand += "\"-Dpub=__attribute__((annotate(\\\"pub\\\")))\" ";
     preprocCommand += "\"-Dpriv=__attribute__((annotate(\\\"priv\\\")))\" ";
-    preprocCommand += "-x c++ \"" + std::string(argv[1]) + "\" > \"" + preprocOutputFile + "\"";
+    preprocCommand += "-x c++ \"" + pubppFile + "\" > \"" + preprocOutputFile + "\"";
     if (system(preprocCommand.c_str()) != 0) {
         std::cerr << "Preprocessing failed.\n";
         return 1;

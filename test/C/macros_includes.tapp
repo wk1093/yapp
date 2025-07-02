@@ -1,0 +1,11 @@
+@test check
+@c "#define FOO" in h
+@c "#define FOO" not in c
+
+#pub define FOO 42
+
+@test check
+@c "stdio.h" in h
+@c "stdio.h" not in c
+
+#pub include <stdio.h>

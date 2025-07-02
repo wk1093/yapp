@@ -2,6 +2,7 @@
 #include "visitor.h"
 #include "decl_utils.h"
 #include <clang-c/Index.h>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
@@ -95,10 +96,67 @@ static std::vector<DeclInfo> collectUniqueDecls() {
     return seen;
 }
 
+// Helper: check if a DeclInfo is a global variable
+static bool isGlobalVariable(const DeclInfo& d) {
+    // Not a function, not a type, not static, not anonymous, and not a member
+    return !d.isStatic && !isAnonymousStruct(d) &&
+        d.kind == CXCursor_VarDecl &&
+        d.namespaces.empty(); // global scope only
+}
+
+// Helper: check if the DeclInfo's type is an anonymous struct/union/enum
+template<typename T>
+static bool isAnonymousTypeCursor(T cursor) {
+    if (!clang_Cursor_isNull(cursor)) {
+        CXString spelling = clang_getCursorSpelling(cursor);
+        bool anon = !clang_getCString(spelling) || !*clang_getCString(spelling);
+        clang_disposeString(spelling);
+        CXCursorKind kind = clang_getCursorKind(cursor);
+        if (anon && (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+extern std::vector<std::string> anonymousTypes; // from visitor.cpp
+
+bool isAnonymousType(const DeclInfo& d) {
+
+    if (d.typeUsr.empty()) {
+        // If we don't have a type USR, we can't check for anonymous types
+        return false;
+    }
+    // Check if the type is an anonymous struct/union/enum
+    if (std::find(anonymousTypes.begin(), anonymousTypes.end(), d.typeUsr)
+        != anonymousTypes.end()) {
+        return true;
+    }
+    return false;
+}
+
+extern std::vector<std::string> preprocStored; // from main.cpp
+
 // Helper: collect public decls for header
 static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
     std::vector<DeclInfo> pubDecls;
     for (const auto& d : seen) {
+        // if name startswith "__pub_preproc__", special case
+        if (d.annotation == "pub" && d.name.find("__pub_preproc__") == 0) {
+            // Special case for preprocessor annotations
+            // name should be "__pub_preproc__<index>"
+            // we need to find the index
+            size_t index = std::stoul(d.name.substr(strlen("__pub_preproc__")));
+            if (index >= preprocStored.size()) {
+                std::cerr << "Warning: __pub_preproc__ index out of bounds: " << index << "\n";
+                continue;
+            }
+            DeclInfo copy = d;
+            copy.code = "#"+preprocStored[index];
+            pubDecls.push_back(copy);
+            continue;
+        }
+        if (d.isStatic) continue; // skip static decls in header
         if (d.annotation == "pub" || isTemplateDecl(d)) {
             if (isAnonymousStruct(d)) {
                 continue;
@@ -115,6 +173,23 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
             if (!isTemplateDecl(d) && d.isDefinition && !d.isInline &&
                 (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod)) {
                 copy.code = makeDeclaration(d.code);
+            }
+            // For global variables, emit as extern in header (but not for anonymous types)
+            if (isGlobalVariable(d)) {
+                if (isAnonymousType(d)) {
+                    // Skip anonymous types in header
+                    continue;
+                }
+                // Remove initializer for extern declaration
+                std::string code = d.code;
+                size_t eq = code.find('=');
+                if (eq != std::string::npos) code = code.substr(0, eq);
+                // Simple trim (left and right)
+                code.erase(0, code.find_first_not_of(" \t\n\r"));
+                code.erase(code.find_last_not_of(" \t\n\r") + 1);
+                if (!code.empty() && code.back() == ';') code.pop_back();
+                copy.code = "extern " + code;
+                
             }
             pubDecls.push_back(copy);
         }
@@ -145,11 +220,19 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
         }
         // Do not emit template definitions in the source file
         if (isTemplateDecl(d)) continue;
+        // Skip anonymous structs in source as well
+        if (isAnonymousStruct(d)) continue;
+        // For priv global variables, only emit in source
+        if (isGlobalVariable(d) && d.annotation == "priv") {
+            sourceDecls.push_back(d);
+            continue;
+        }
         if (d.annotation == "pub") {
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
             if (!d.isDefinition) continue;
         }
+        // static decls are allowed in source
         sourceDecls.push_back(d);
     }
     std::sort(sourceDecls.begin(), sourceDecls.end(), [](const DeclInfo& a, const DeclInfo& b) {

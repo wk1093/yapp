@@ -9,6 +9,7 @@
 std::vector<DeclInfo> decls;
 int orderCounter = 0;
 std::unordered_set<std::string> typedefBackedTags;
+std::vector<std::string> anonymousTypes;
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
@@ -36,8 +37,17 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.isExternC = isExternC(cursor);
     info.kind = kind;
     info.namespaces = getNamespaceChain(cursor);
+    // Robust static detection for functions and variables
+    info.isStatic = (clang_Cursor_getStorageClass(cursor) == CX_SC_Static);
     // --- TEMPLATE DETECTION ---
     info.isTemplate = false;
+    info.typeUsr = "";
+    auto ct = clang_getCursorType(cursor);
+    auto typeDecl = clang_getTypeDeclaration(ct);
+    if (!clang_Cursor_isNull(typeDecl)) {
+        info.typeUsr = toStdString(clang_getCursorUSR(typeDecl));
+    }
+
     // Mark as template if this is a template cursor kind
     if (kind == CXCursor_FunctionTemplate ||
         kind == CXCursor_ClassTemplate ||
@@ -72,14 +82,17 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
             if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
                 (strcmp(clang_getCString(spelling), "struct") == 0)) {
                 info.name = "";
+                anonymousTypes.push_back(info.usr); // Track anonymous struct/union/enum USRs
             }
             if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
                 (strcmp(clang_getCString(spelling), "union") == 0)) {
                 info.name = "";
+                anonymousTypes.push_back(info.usr); // Track anonymous struct/union/enum USRs
             }
             if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
                 (strcmp(clang_getCString(spelling), "enum") == 0)) {
                 info.name = "";
+                anonymousTypes.push_back(info.usr); // Track anonymous struct/union/enum USRs
             }
             clang_disposeString(spelling);
         }

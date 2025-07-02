@@ -1,0 +1,25 @@
+@test check
+@c "foo" in h
+@c "foo" in c
+
+void foo();
+
+void foo() {}
+
+@test check
+@c "bar" in h
+@c "bar" not in c
+
+pub void bar();
+
+@test check
+@c "baz" not in h
+@c "baz" in c
+
+priv void baz() {}
+
+@test check
+@c "staticfunc" not in h
+@c "staticfunc" in c
+
+static void staticfunc() {}

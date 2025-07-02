@@ -12,9 +12,11 @@ struct DeclInfo {
     bool isInline = false;
     bool isExternC = false;
     bool isTemplate = false;
+    bool isStatic = false;
     CXCursorKind kind;
     int sourceOrderIndex = 0;
     std::vector<std::string> namespaces;
+    std::string typeUsr;
 };
 
 bool isExternC(CXCursor cursor);

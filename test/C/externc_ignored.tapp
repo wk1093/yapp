@@ -1,0 +1,11 @@
+@test check
+@c "extern" not in h
+@c "extern" not in c
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void cfunc();
+#ifdef __cplusplus
+}
+#endif

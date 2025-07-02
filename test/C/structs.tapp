@@ -1,0 +1,17 @@
+@test check
+@c "mystruct" in h
+@c "mystruct" not in c
+
+struct mystruct { int x; };
+
+@test check
+@c "typedefstruct" in h
+@c "typedefstruct" not in c
+
+typedef struct { int y; } typedefstruct;
+
+@test check
+@c "anonstruct" not in h
+@c "anonstruct" in c
+
+struct { int z; } anonstruct;

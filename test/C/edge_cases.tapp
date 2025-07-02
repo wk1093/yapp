@@ -1,0 +1,17 @@
+@test check
+@c "nestedstruct" in h
+@c "nestedstruct" not in c
+
+struct nestedstruct { struct { int x; } inner; };
+
+@test check
+@c "typedefunion" in h
+@c "typedefunion" not in c
+
+typedef union { float f; int i; } typedefunion;
+
+@test check
+@c "enumtag" in h
+@c "enumtag" not in c
+
+typedef enum { E1, E2 } enumtag;

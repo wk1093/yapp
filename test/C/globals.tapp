@@ -1,0 +1,17 @@
+@test check
+@c "extern" in h and "pubvar" in h and "42" not in h
+@c "int pubvar = 42" in c
+
+pub int pubvar = 42;
+
+@test check
+@c "privvar" not in h
+@c "int privvar = 7" in c
+
+priv int privvar = 7;
+
+@test check
+@c "extern" in h and "defvar" in h and "99" not in h
+@c "int defvar = 99" in c
+
+int defvar = 99;
