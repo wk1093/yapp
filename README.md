@@ -1,4 +1,4 @@
-# XPP
+# YAPP (Yet Another Plus Plus Language) - A C++-based Headerless Language
 
 A C++ based programming language that removes the need for headers and source separation by using a single file for both declarations and definitions. It is designed to be simple and easy to use, while still providing the power and flexibility of C++.
 

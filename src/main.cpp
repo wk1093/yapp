@@ -379,18 +379,18 @@ void writeFiles(const std::string& base, const std::string& dir) {
 
 
 // Instead of running 3 commands like this:
-// clang -E PREPROC_ARGS "-Dpub=__attribute__((annotate(\"pub\")))" "-Dpriv=__attribute__((annotate(\"priv\")))" -x c++ test.xpp > test.p.xpp
-// ./this_program test.p.xpp
+// clang -E PREPROC_ARGS "-Dpub=__attribute__((annotate(\"pub\")))" "-Dpriv=__attribute__((annotate(\"priv\")))" -x c++ test.yapp > test.p.yapp
+// ./this_program test.p.yapp
 // clang++ test.gen.cpp COMPILE_ARGS
 // We can run a single command:
-// ./this_program test.xpp PREPROC_ARGS -- COMPILE_ARGS
+// ./this_program test.yapp PREPROC_ARGS -- COMPILE_ARGS
 // where PREPROC_ARGS are the arguments for the preprocessor, and COMPILE_ARGS are the
 // arguments for the compiler. The preprocessor will run first, and then this program
 
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "Usage: ./header_generator <source.xpp> [Preprocessor Args] -- [Compiler Args]\n";
+        std::cerr << "Usage: ./header_generator <source.yapp> [Preprocessor Args] -- [Compiler Args]\n";
         return 1;
     }
 
@@ -411,11 +411,11 @@ int main(int argc, char** argv) {
 
     // preprocessor step
     std::string preprocOutputFile = argv[1];
-    if (preprocOutputFile.find(".xpp") == std::string::npos) {
-        std::cerr << "Input file must have .xpp extension.\n";
+    if (preprocOutputFile.find(".yapp") == std::string::npos) {
+        std::cerr << "Input file must have .yapp extension.\n";
         return 1;
     }
-    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 4) + ".p.xpp";
+    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 4) + ".p.yapp";
     std::string preprocCommand = "clang -E ";
     for (const auto& arg : preprocArgs) {
         preprocCommand += "\"" + arg + "\" ";

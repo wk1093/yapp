@@ -6,7 +6,7 @@ import time
 
 # TODO: recurse for this
 TEST_FILES = [
-    "test/test1.xppt"
+    "test/test1.tapp"
 ]
 
 TESTS = []
@@ -34,11 +34,11 @@ def run_test(test, test_dir):
             elif test_count == test[1]:
                 test_code.append(line)
     # write the test to a file
-    with open(os.path.join(test_dir, "test.xppt"), 'w') as f:
+    with open(os.path.join(test_dir, "test.tapp"), 'w') as f:
         f.writelines(test_code)
 
     # write the code to a file (remove all test directives which are lines that start with @)
-    with open(os.path.join(test_dir, "test.xpp"), 'w') as f:
+    with open(os.path.join(test_dir, "test.yapp"), 'w') as f:
         for line in test_code:
             if not line.lstrip().startswith("@"):
                 f.write(line)
@@ -51,14 +51,14 @@ def run_test(test, test_dir):
     # the first line should be @test compile or @test check
     if "compile" in test_code[0]:
         # compile the test code
-        # subprocess.run(["./build/xppc", os.path.join(test_dir, "test.xpp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True)
+        # subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True)
         # capture output and errors
         # write to a log file
         with open(os.path.join(test_dir, "compile.log"), 'w') as log_file:
             print(f"{test[0]} (test {test[1]}) compile... ", end='')
             log_file.write("Starting compilation...\n")
             try:
-                subprocess.run(["./build/xppc", os.path.join(test_dir, "test.xpp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful.\n")
                 print("[OK]", flush=True)
             except Exception as e:
@@ -72,7 +72,7 @@ def run_test(test, test_dir):
             log_file.write("Starting compilation for check...\n")
             try:
                 # run the compiler with the test code
-                subprocess.run(["./build/xppc", os.path.join(test_dir, "test.xpp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful for check.\n")
 
             except subprocess.CalledProcessError as e:
@@ -89,7 +89,7 @@ def run_test(test, test_dir):
                 print("[FAILED: No source]", flush=True)
                 return
             
-            # The check test should have something like this at the top of the xppt:
+            # The check test should have something like this at the top of the tapp:
             # @test check
             # @c !h.contains("testfunction")
             # @c c.contains("testfunction")
