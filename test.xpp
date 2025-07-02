@@ -1,10 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
 
-struct priv test1 {
-    int a;
-    int b;
-};
 
 namespace testing {
     priv void test() {

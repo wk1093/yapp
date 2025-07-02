@@ -3,3 +3,4 @@ build/
 *.gen.cpp
 *.gen.h
 *.p.xpp
+*.elf

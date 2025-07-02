@@ -4,13 +4,16 @@
 #include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <cstring>
+#include <unordered_set>
 
 struct DeclInfo {
     std::string name;
+    std::string usr;
     std::string code;
     std::string annotation; // "pub" or "priv"
     bool isDefinition = false;
@@ -132,6 +135,7 @@ std::vector<std::string> getNamespaceChain(CXCursor cursor) {
 
 std::vector<DeclInfo> decls;
 int orderCounter = 0;
+std::unordered_set<std::string> typedefBackedTags;
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
@@ -146,7 +150,6 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
 
     std::string annotation = getAnnotate(cursor);
     if (annotation.empty()) {
-        CXCursorKind kind = clang_getCursorKind(cursor);
 
         // Always treat type declarations and aliases as public
         if (kind == CXCursor_TypedefDecl || kind == CXCursor_TypeAliasDecl || kind == CXCursor_StructDecl || CXCursor_UnionDecl || kind == CXCursor_ClassDecl) {
@@ -161,6 +164,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
 
     DeclInfo info;
     info.name = toStdString(clang_getCursorSpelling(cursor));
+    info.usr = toStdString(clang_getCursorUSR(cursor));
     info.annotation = annotation;
     info.isDefinition = clang_isCursorDefinition(cursor);
     info.isInline = clang_Cursor_isFunctionInlined(cursor);
@@ -168,7 +172,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.kind = kind;
     info.namespaces = getNamespaceChain(cursor);
     // ANONYMOUS DETECTION
-    if (kind == CXCursor_StructDecl) {
+    if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
         auto range = clang_Cursor_getSpellingNameRange(cursor, 0, 0);
         CXTranslationUnit tu = *(CXTranslationUnit*)client_data;
         CXToken* tokens = nullptr;
@@ -178,7 +182,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
             CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
             if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
                 (strcmp(clang_getCString(spelling), "struct") == 0)) {
-                std::cout << "Warning: Anonymous struct detected for " << info.name << "\n";
+                info.name = "";
+            }
+            if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
+                (strcmp(clang_getCString(spelling), "union") == 0)) {
+                info.name = "";
+            }
+            if (clang_getTokenKind(tokens[i]) == CXToken_Keyword &&
+                (strcmp(clang_getCString(spelling), "enum") == 0)) {
                 info.name = "";
             }
             clang_disposeString(spelling);
@@ -190,6 +201,18 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.code = getSourceText(cursor, tu);
     info.sourceOrderIndex = orderCounter++;
 
+    if (clang_getCursorKind(cursor) == CXCursor_TypedefDecl) {
+        clang_visitChildren(cursor, [](CXCursor c, CXCursor, CXClientData client_data) {
+            auto kind = clang_getCursorKind(c);
+            if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
+                std::string structName = toStdString(clang_getCursorUSR(c));
+                if (!structName.empty()) {
+                    static_cast<std::unordered_set<std::string>*>(client_data)->insert(structName);
+                }
+            }
+            return CXChildVisit_Continue;
+        }, &typedefBackedTags);
+    }
     decls.push_back(info);
     return CXChildVisit_Continue;
 }
@@ -218,16 +241,16 @@ void writeFiles(const std::string& base) {
 
     // Map: name -> best pub DeclInfo
     std::vector<DeclInfo> seen;
-    std::unordered_map<std::string, size_t> nameToIndex;
+    std::unordered_map<std::string, size_t> usrToIndex;
     for (auto& d : decls) {
         if (d.annotation.empty()) {
             std::cout << "Warning: Declaration without annotation for " << d.name << "\n";
             d.annotation = "priv";
         }
 
-        auto it = nameToIndex.find(d.name);
-        if (it == nameToIndex.end()) {
-            nameToIndex[d.name] = seen.size();
+        auto it = usrToIndex.find(d.usr);
+        if (it == usrToIndex.end()) {
+            usrToIndex[d.usr] = seen.size();
             seen.push_back(d);
         } else {
             auto& existing = seen[it->second];
@@ -266,7 +289,13 @@ void writeFiles(const std::string& base) {
 
             currentNS = d.namespaces;
 
-            out << d.code << ";\n\n";
+            if (d.isExternC) {
+                out << "#ifdef __cplusplus\nextern \"C\" {\n#endif\n";
+                out << d.code << ";\n";
+                out << "#ifdef __cplusplus\n}\n#endif\n\n";
+            } else {
+                out << d.code << ";\n\n";
+            }
         }
 
         // Close remaining namespaces
@@ -276,8 +305,7 @@ void writeFiles(const std::string& base) {
     };
 
     // --- Collect header declarations ---
-    std::vector<DeclInfo> normalPubDecls;
-    std::vector<DeclInfo> externCPubDecls;
+    std::vector<DeclInfo> pubDecls;
 
     for (const auto& d : seen) {
         if (d.annotation == "pub") {
@@ -285,26 +313,28 @@ void writeFiles(const std::string& base) {
 
                 continue;
             }
+            if ((d.kind == CXCursor_StructDecl ||
+                d.kind == CXCursor_UnionDecl ||
+                d.kind == CXCursor_EnumDecl) &&
+                typedefBackedTags.count(d.usr))
+            {
+                continue; // This struct/union/enum is already included in a typedef
+            }
             DeclInfo copy = d;
             if (d.isDefinition && !d.isInline &&
                 (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod)) {
                 copy.code = makeDeclaration(d.code);
             }
-            if (d.isExternC) {
-                externCPubDecls.push_back(copy);
-            } else {
-                normalPubDecls.push_back(copy);
-            }
+            
+            pubDecls.push_back(copy);
         }
     }
 
-    emitWithNamespaces(hfile, normalPubDecls);
+    std::sort(pubDecls.begin(), pubDecls.end(), [](const DeclInfo& a, const DeclInfo& b) {
+        return a.sourceOrderIndex < b.sourceOrderIndex;
+    });
 
-    if (!externCPubDecls.empty()) {
-        hfile << "#ifdef __cplusplus\nextern \"C\" {\n#endif\n";
-        emitWithNamespaces(hfile, externCPubDecls);
-        hfile << "#ifdef __cplusplus\n}\n#endif\n";
-    }
+    emitWithNamespaces(hfile, pubDecls);
 
     hfile << "#undef pub\n#undef priv\n";
 
@@ -332,6 +362,7 @@ void writeFiles(const std::string& base) {
         if (d.annotation == "pub") {
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
+            if (!d.isDefinition) continue; // maybe remove this?
         }
 
         sourceDecls.push_back(d);
@@ -398,9 +429,35 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // remove the # line directives from the preprocessed output
+    std::ifstream preprocFile(preprocOutputFile);
+    if (!preprocFile) {
+        std::cerr << "Failed to open preprocessed file: " << preprocOutputFile << "\n";
+        return 1;
+    }
+    std::string line;
+    std::ostringstream cleanedOutput;
+    while (std::getline(preprocFile, line)) {
+        // Remove lines starting with # (line directives)
+        if (line.empty() || line[0] != '#') {
+            cleanedOutput << line << "\n";
+        } else {
+            cleanedOutput << "\n"; // Comment out the line directive for clarity
+        }
+    }
+    preprocFile.close();
+    // Write cleaned output back to the file
+    std::ofstream cleanedFile(preprocOutputFile);
+    if (!cleanedFile) {
+        std::cerr << "Failed to write cleaned preprocessed file: " << preprocOutputFile << "\n";
+        return 1;
+    }
+    cleanedFile << cleanedOutput.str();
+    cleanedFile.close();
+
     CXIndex index = clang_createIndex(0, 0);
     const char* args[] = {
-        "-x", "c++",
+        "-x", "c++-cpp-output",
         "-std=c++20",
         "-Dpub=__attribute__((annotate(\"pub\")))",
         "-Dpriv=__attribute__((annotate(\"priv\")))"
