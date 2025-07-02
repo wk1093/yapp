@@ -1,0 +1,21 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+struct priv test1 {
+    int a;
+    int b;
+};
+
+namespace testing {
+    priv void test() {
+        printf("Testing...\n");
+    }
+}
+
+pub int main() {
+    printf("Hello, World!\n");
+
+    testing::test();
+
+    return 0;
+}
