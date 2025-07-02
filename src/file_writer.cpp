@@ -242,11 +242,11 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
 }
 
 void writeFiles(const std::string& base, const std::string& dir) {
-    std::ofstream hfile(dir + base + ".gen.h");
-    std::ofstream cppfile(dir + base + ".gen.cpp");
+    std::ofstream hfile(dir + base + ".yapp.h");
+    std::ofstream cppfile(dir + base + ".yapp.cpp");
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
-    cppfile << "#include \"" << base << ".gen.h\"\n\n";
+    cppfile << "#include \"" << base << ".yapp.h\"\n\n";
     cppfile << "#define pub\n#define priv\n\n";
     auto seen = collectUniqueDecls();
     auto pubDecls = collectHeaderDecls(seen);

@@ -42,24 +42,54 @@ std::string prePreprocess(const std::string& inputFile) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "Usage: ./header_generator <source.yapp> [Preprocessor Args] -- [Compiler Args]\n";
+        std::cerr << "Usage: ./yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]\n";
         return 1;
     }
 
     std::vector<std::string> preprocArgs;
     std::vector<std::string> compileArgs;
-    bool isPreprocArgs = true;
+    std::vector<std::string> myArgs;
+    // bool isPreprocArgs = true;
+    // for (int i = 2; i < argc; ++i) {
+    //     if (strcmp(argv[i], "--") == 0) {
+    //         isPreprocArgs = false;
+    //         continue;
+    //     }
+    //     if (isPreprocArgs) {
+    //         preprocArgs.push_back(argv[i]);
+    //     } else {
+    //         compileArgs.push_back(argv[i]);
+    //     }
+    // }
+
+    int argState = 0; // 0: myargs, 1: preprocArgs, 2: compileArgs
     for (int i = 2; i < argc; ++i) {
         if (strcmp(argv[i], "--") == 0) {
-            isPreprocArgs = false;
+            argState++;
             continue;
         }
-        if (isPreprocArgs) {
+        if (argState == 0) {
+            myArgs.push_back(argv[i]);
+        } else if (argState == 1) {
             preprocArgs.push_back(argv[i]);
-        } else {
+        } else if (argState == 2) {
             compileArgs.push_back(argv[i]);
         }
     }
+    // Check for -d option in myArgs
+    bool debugMode = false;
+    bool showGenerated = false;
+    for (const auto& arg : myArgs) {
+        if (arg == "-d") {
+            debugMode = true;
+            break;
+        }
+        if (arg == "-g") {
+            showGenerated = true;
+            break;
+        }
+    }
+
 
     // pre-preprocessor step
     std::string pubppFile = prePreprocess(argv[1]);
@@ -69,13 +99,14 @@ int main(int argc, char** argv) {
         std::cerr << "Input file must have .yapp extension.\n";
         return 1;
     }
-    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 4) + ".p.yapp";
+    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 6) + ".pyapp";
     std::string preprocCommand = "clang -E ";
     for (const auto& arg : preprocArgs) {
         preprocCommand += "\"" + arg + "\" ";
     }
     preprocCommand += "\"-Dpub=__attribute__((annotate(\\\"pub\\\")))\" ";
     preprocCommand += "\"-Dpriv=__attribute__((annotate(\\\"priv\\\")))\" ";
+    preprocCommand += "-D__yaplusplus ";
     preprocCommand += "-x c++ \"" + pubppFile + "\" > \"" + preprocOutputFile + "\"";
     if (system(preprocCommand.c_str()) != 0) {
         std::cerr << "Preprocessing failed.\n";
@@ -141,7 +172,7 @@ int main(int argc, char** argv) {
     writeFiles(filename, dir);
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
-    std::string compileCommand = "clang++ \"" + dir + filename + ".gen.cpp\" ";
+    std::string compileCommand = "clang++ \"" + dir + filename + ".yapp.cpp\" ";
     for (const auto& arg : compileArgs) {
         compileCommand += "\"" + arg + "\" ";
     }
@@ -149,5 +180,16 @@ int main(int argc, char** argv) {
         std::cerr << "Compilation failed.\n";
         return 1;
     }
+
+    if (!debugMode) {
+        // remove intermediate files
+        std::remove(preprocOutputFile.c_str());
+        std::remove(pubppFile.c_str());
+        if (!showGenerated) {   
+            std::remove((dir + filename + ".yapp.cpp").c_str());
+            std::remove((dir + filename + ".yapp.h").c_str());
+        }
+    }
+
     return 0;
 }

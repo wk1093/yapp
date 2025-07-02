@@ -4,6 +4,11 @@ import subprocess
 import shutil
 import time
 
+debug = True
+
+if len(sys.argv) > 1 and sys.argv[1] == "nodbg":
+    debug = False
+
 # ANSI escape codes for formatting
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -23,6 +28,8 @@ for root, dirs, files in os.walk("test"):
 
 TESTS = []
 
+any_failed = False
+
 for test_file in TEST_FILES:
     with open(test_file, 'r') as f:
         # Find all line numbers where @test appears at the start of the line
@@ -31,6 +38,7 @@ for test_file in TEST_FILES:
             TESTS.append((test_file, len(test_lines), test_lines))
 
 def run_test(test, test_dir):
+    global any_failed
     # get all code after (but including) the nth "@test" in the file until the next "@test" or end of file
     with open(test[0], 'r') as f:
         lines = f.readlines()
@@ -69,13 +77,21 @@ def run_test(test, test_dir):
             print(f"{test_line_info} compile... ", end='')
             log_file.write(f"Starting compilation...\nTest source: {test[0]} line {test[2]}\n")
             try:
-                subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                args1 = ["./build/yappc", os.path.join(test_dir, "test.yapp")]
+                if debug:
+                    args1.append("-d")
+                else:
+                    args1.append("-g")
+                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
+                log_file.write(f"Running command: {' '.join(args)}\n")
+                subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful.\n")
                 print(f"{GREEN}[OK]{RESET}", flush=True)
             except Exception as e:
                 log_file.write("An error occurred during compilation.\n")
                 log_file.write(str(e))
                 print(f"{RED}[FAILED]{RESET} {test_dir}", flush=True)
+                any_failed = True
     elif "check" in test_code[0]:
         nocompile = any(line.lstrip().startswith("@nocompile") for line in test_code)
         with open(os.path.join(test_dir, "check.log"), 'w') as log_file:
@@ -83,7 +99,14 @@ def run_test(test, test_dir):
             log_file.write(f"Starting compilation for check...\nTest source: {test[0]} line {test[2]}\n")
             compile_failed = False
             try:
-                subprocess.run(["./build/yappc", os.path.join(test_dir, "test.yapp"), "--", "-c", "-o", os.path.join(test_dir, "test.o")], check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                args1 = ["./build/yappc", os.path.join(test_dir, "test.yapp")]
+                if debug:
+                    args1.append("-d")
+                else:
+                    args1.append("-g")
+                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
+                log_file.write(f"Running command: {' '.join(args)}\n")
+                subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful for check.\n")
             except subprocess.CalledProcessError as e:
                 log_file.write("An error occurred during compilation for check.\n")
@@ -91,6 +114,7 @@ def run_test(test, test_dir):
                 compile_failed = True
             if compile_failed and not nocompile:
                 print(f"{RED}[FAILED: Compilation error]{RESET} {test_dir}", flush=True)
+                any_failed = True
                 return
             # Prepare conditions and file contents before error handling
             conditions = []
@@ -98,8 +122,8 @@ def run_test(test, test_dir):
                 if line.lstrip().startswith("@c "):
                     condition = line.split(" ", 1)[1].strip()
                     conditions.append(condition)
-            header_file_path = os.path.join(test_dir, "test.gen.h")
-            source_file_path = os.path.join(test_dir, "test.gen.cpp")
+            header_file_path = os.path.join(test_dir, "test.yapp.h")
+            source_file_path = os.path.join(test_dir, "test.yapp.cpp")
             header_content = None
             source_content = None
             try:
@@ -108,6 +132,7 @@ def run_test(test, test_dir):
             except FileNotFoundError:
                 log_file.write(f"Header file {header_file_path} not found.\n")
                 print(f"{RED}[FAILED: Header not found]{RESET} {test_dir}", flush=True)
+                any_failed = True
                 return
             try:
                 with open(source_file_path, 'r') as source_file:
@@ -115,6 +140,7 @@ def run_test(test, test_dir):
             except FileNotFoundError:
                 log_file.write(f"Source file {source_file_path} not found.\n")
                 print(f"{RED}[FAILED: Source not found]{RESET} {test_dir}", flush=True)
+                any_failed = True
                 return
             all_conditions_met = True
             for condition in conditions:
@@ -138,6 +164,7 @@ def run_test(test, test_dir):
             else:
                 log_file.write("Not all conditions were met.\n")
                 print(f"{RED}[FAILED: Conditions not met]{RESET} {test_dir}", flush=True)
+                any_failed = True
     else:
         print(f"{YELLOW}{BOLD}{test[0]}:{test[2]} ({test_index}){RESET} has an unrecognized test directive. Please use @test compile or @test check.", flush=True)
         return
@@ -153,3 +180,8 @@ time.sleep(1)
 
 for test in TESTS:
     run_tests(test)
+
+if any_failed:
+    print(f"{RED}{BOLD}Some tests failed. Please check the logs for details.{RESET}", flush=True)
+    sys.exit(1)
+print(f"{GREEN}{BOLD}All tests passed successfully!{RESET}", flush=True)

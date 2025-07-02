@@ -4,8 +4,17 @@
 
 #pub define FOO 42
 
+pub int main() {
+    return FOO;
+}
+
 @test check
 @c "stdio.h" in h
 @c "stdio.h" not in c
 
 #pub include <stdio.h>
+
+pub int main() {
+    printf("Hello, World!\n");
+    return 0;
+}

@@ -1,0 +1,7 @@
+@test check
+@c "extern" in h
+@c "extern" not in c
+
+extern "C" {
+    void cfunc();
+}

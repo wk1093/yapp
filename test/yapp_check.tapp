@@ -1,0 +1,13 @@
+@test check
+@c "YES" in c
+@c "NO" not in c
+
+#ifdef __yaplusplus
+
+const char* yaplusplus_check = "YES";
+
+#else
+
+const char* yaplusplus_check = "NO";
+
+#endif
