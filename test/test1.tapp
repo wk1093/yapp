@@ -65,14 +65,20 @@ priv void testfunction();
 
 void testfunction();
 
-@test compile
+@test check
+@c "Value: %d\\n" in h
+@c "Value: %d\\n" not in c
 
 #include <cstdio>
-#include <vector>
 
-pub void printVector(const std::vector<int>& vec) {
-    for (int num : vec) {
-        printf("%d ", num);
+namespace testing {
+    template<typename T>
+    pub void printValue(T value) {
+        printf("Value: %d\n", value);
     }
-    printf("\n");
+}
+
+pub int main() {
+    testing::printValue(42);
+    return 0;
 }

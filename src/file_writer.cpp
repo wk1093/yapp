@@ -12,30 +12,56 @@ static bool isTemplateDecl(const DeclInfo& d) {
     return d.isTemplate;
 }
 
-// Helper: emit decls with namespace handling
+// Helper: emit decls with namespace and extern "C" grouping, with strict nesting
 static void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
     std::vector<std::string> currentNS;
-    for (const auto& d : decls) {
+    bool inExternC = false;
+    for (size_t idx = 0; idx < decls.size(); ++idx) {
+        const auto& d = decls[idx];
         size_t common = 0;
         while (common < currentNS.size() && common < d.namespaces.size() &&
                currentNS[common] == d.namespaces[common]) {
             ++common;
         }
+        // Always close extern "C" before closing/opening namespaces
+        if (inExternC && (currentNS.size() != common || d.namespaces.size() != common)) {
+            out << "#ifdef __cplusplus\n}\n#endif\n";
+            inExternC = false;
+        }
+        // Close namespaces
         for (size_t i = currentNS.size(); i-- > common;) {
             out << "}\n";
         }
+        // Open namespaces
         for (size_t i = common; i < d.namespaces.size(); ++i) {
             out << "namespace " << d.namespaces[i] << " {\n";
         }
         currentNS = d.namespaces;
-        if (d.isExternC) {
+        // Open extern "C" if needed (always after namespace is open)
+        if (d.isExternC && !inExternC) {
             out << "#ifdef __cplusplus\nextern \"C\" {\n#endif\n";
-            out << d.code << ";\n";
-            out << "#ifdef __cplusplus\n}\n#endif\n\n";
-        } else {
-            out << d.code << ";\n\n";
+            inExternC = true;
+        }
+        // Output the declaration
+        out << d.code << ";\n\n";
+        // If the next decl is in a different namespace or extern "C" state, close extern "C" now
+        bool nextNeedsExtern = false;
+        size_t nextCommon = common;
+        if (idx + 1 < decls.size()) {
+            const auto& next = decls[idx + 1];
+            nextCommon = 0;
+            while (nextCommon < currentNS.size() && nextCommon < next.namespaces.size() &&
+                   currentNS[nextCommon] == next.namespaces[nextCommon]) {
+                ++nextCommon;
+            }
+            nextNeedsExtern = next.isExternC;
+        }
+        if (inExternC && (idx + 1 == decls.size() || currentNS.size() != nextCommon || !nextNeedsExtern)) {
+            out << "#ifdef __cplusplus\n}\n#endif\n";
+            inExternC = false;
         }
     }
+    // Close any open namespaces
     for (size_t i = currentNS.size(); i-- > 0;) {
         out << "}\n";
     }

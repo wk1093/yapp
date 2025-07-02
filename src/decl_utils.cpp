@@ -69,7 +69,7 @@ std::string getAnnotate(CXCursor cursor) {
 std::vector<std::string> getNamespaceChain(CXCursor cursor) {
     std::vector<std::string> chain;
     CXCursor parent = clang_getCursorSemanticParent(cursor);
-    while (!clang_Cursor_isNull(parent)) {
+    while (!clang_Cursor_isNull(parent) && clang_getCursorKind(parent) != CXCursor_TranslationUnit) {
         if (clang_getCursorKind(parent) == CXCursor_Namespace) {
             std::string ns = toStdString(clang_getCursorSpelling(parent));
             chain.push_back(ns);
