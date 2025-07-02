@@ -13,6 +13,7 @@ struct DeclInfo {
     bool isExternC = false;
     bool isTemplate = false;
     bool isStatic = false;
+    bool isExtern = false;
     CXCursorKind kind;
     int sourceOrderIndex = 0;
     std::vector<std::string> namespaces;

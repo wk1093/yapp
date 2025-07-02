@@ -3,6 +3,7 @@
 #include "decl_utils.h"
 #include <clang-c/Index.h>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
@@ -180,15 +181,18 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
                     // Skip anonymous types in header
                     continue;
                 }
-                // Remove initializer for extern declaration
-                std::string code = d.code;
-                size_t eq = code.find('=');
-                if (eq != std::string::npos) code = code.substr(0, eq);
-                // Simple trim (left and right)
-                code.erase(0, code.find_first_not_of(" \t\n\r"));
-                code.erase(code.find_last_not_of(" \t\n\r") + 1);
-                if (!code.empty() && code.back() == ';') code.pop_back();
-                copy.code = "extern " + code;
+                // check if we already have extern
+                if (!d.isExtern) {
+                    // Remove initializer for extern declaration
+                    std::string code = d.code;
+                    size_t eq = code.find('=');
+                    if (eq != std::string::npos) code = code.substr(0, eq);
+                    // Simple trim (left and right)
+                    code.erase(0, code.find_first_not_of(" \t\n\r"));
+                    code.erase(code.find_last_not_of(" \t\n\r") + 1);
+                    if (!code.empty() && code.back() == ';') code.pop_back();
+                    copy.code = "extern " + code;
+                }
                 
             }
             pubDecls.push_back(copy);
@@ -242,8 +246,8 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
 }
 
 void writeFiles(const std::string& base, const std::string& dir) {
-    std::ofstream hfile(dir + base + ".yapp.h");
-    std::ofstream cppfile(dir + base + ".yapp.cpp");
+    std::ofstream hfile(std::filesystem::path(dir) / (base + ".yapp.h"));
+    std::ofstream cppfile(std::filesystem::path(dir) / (base + ".yapp.cpp"));
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
     cppfile << "#include \"" << base << ".yapp.h\"\n\n";

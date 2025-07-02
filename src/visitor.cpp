@@ -35,6 +35,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.isDefinition = clang_isCursorDefinition(cursor);
     info.isInline = clang_Cursor_isFunctionInlined(cursor);
     info.isExternC = isExternC(cursor);
+    info.isExtern = (clang_getCursorLinkage(cursor) == CXLinkage_External) && clang_Cursor_hasVarDeclExternalStorage(cursor);
     info.kind = kind;
     info.namespaces = getNamespaceChain(cursor);
     // Robust static detection for functions and variables

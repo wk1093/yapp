@@ -1,5 +1,6 @@
 #include "file_writer.h"
 #include "visitor.h"
+#include <filesystem>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -10,7 +11,7 @@
 
 std::vector<std::string> preprocStored;
 
-std::string prePreprocess(const std::string& inputFile) {
+std::string prePreprocess(const std::string& inputFile, const std::string& outputDir) {
     std::ifstream in(inputFile);
     if (!in) {
         std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
@@ -29,7 +30,8 @@ std::string prePreprocess(const std::string& inputFile) {
             out << line << "\n";
         }
     }
-    std::string outFile = inputFile + ".pubpp";
+    // std::string outFile = inputFile + ".pubpp";
+    std::string outFile = std::filesystem::path(outputDir) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pubpp");
     std::ofstream pubpp(outFile);
     if (!pubpp) {
         std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
@@ -39,6 +41,22 @@ std::string prePreprocess(const std::string& inputFile) {
     pubpp.close();
     return outFile;
 }
+
+const char* usageString = R"(
+Usage: yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]
+Options:
+    -d          Enable debug mode (keep intermediate files)
+    -g          Show generated .yapp.cpp and .yapp.h files (but not other intermediate files)
+    -h          Show this help message
+    -o <output> Specify output folder for generated files (default: same as input file)
+    --          Separator for different argument sections
+Preprocessor Args:
+    These arguments are passed directly to the preprocessor (clang -E).
+    You can use -D to define macros, e.g., -DDEBUG=1.
+Compiler Args:
+    These arguments are passed directly to the compiler (clang++).
+    You can use -o to specify the output file.
+)";
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -79,23 +97,50 @@ int main(int argc, char** argv) {
     // Check for -d option in myArgs
     bool debugMode = false;
     bool showGenerated = false;
-    for (const auto& arg : myArgs) {
+    std::string outputDir = ""; // Default to same directory as input file
+    for (int i = 0; i < myArgs.size(); i++) {
+        std::string arg = myArgs[i];
         if (arg == "-d") {
             debugMode = true;
-            break;
         }
         if (arg == "-g") {
             showGenerated = true;
-            break;
+        }
+        if (arg == "-h") {
+            std::cout << usageString;
+            return 0;
+        }
+        if (arg == "-o") {
+            // Handle output directory option
+            if (i + 1 >= myArgs.size()) {
+                // If -o is the last argument, we can't set an output directory
+                std::cerr << "Error: -o option requires an argument.\n";
+                return 1; 
+            } else if (myArgs[i + 1][0] == '-') {
+                // If the next argument is another option, we can't set an output directory
+                std::cerr << "Error: -o option requires a directory argument.\n";
+                return 1;
+            } else {
+                outputDir = myArgs[i + 1];
+                i++; // Skip the next argument since it's the directory
+            }
         }
     }
 
+    std::string base = argv[1];
+    size_t slash = base.find_last_of("/\\");
+    size_t dot = base.find_last_of('.');
+    std::string filename = base.substr(slash == std::string::npos ? 0 : slash + 1, dot - (slash == std::string::npos ? 0 : slash + 1));
+    std::string dir = (slash == std::string::npos) ? "./" : base.substr(0, slash + 1);
+    if (outputDir.empty()) {
+        outputDir = dir; // Default to same directory as input file
+    }
 
     // pre-preprocessor step
-    std::string pubppFile = prePreprocess(argv[1]);
+    std::string pubppFile = prePreprocess(argv[1], outputDir);
     // preprocessor step
     std::string preprocOutputFile = pubppFile;
-    if (preprocOutputFile.find(".yapp") == std::string::npos) {
+    if (preprocOutputFile.find(".yapp.pubpp") == std::string::npos) {
         std::cerr << "Input file must have .yapp extension.\n";
         return 1;
     }
@@ -164,15 +209,11 @@ int main(int argc, char** argv) {
     CXCursor root = clang_getTranslationUnitCursor(tu);
     clang_visitChildren(root, visitor, &tu);
 
-    std::string base = argv[1];
-    size_t slash = base.find_last_of("/\\");
-    size_t dot = base.find_last_of('.');
-    std::string filename = base.substr(slash == std::string::npos ? 0 : slash + 1, dot - (slash == std::string::npos ? 0 : slash + 1));
-    std::string dir = (slash == std::string::npos) ? "./" : base.substr(0, slash + 1);
-    writeFiles(filename, dir);
+    writeFiles(filename, outputDir);
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
-    std::string compileCommand = "clang++ \"" + dir + filename + ".yapp.cpp\" ";
+    std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
+    std::string compileCommand = "clang++ \"" + outdirfilename + "\" ";
     for (const auto& arg : compileArgs) {
         compileCommand += "\"" + arg + "\" ";
     }
