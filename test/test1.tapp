@@ -64,3 +64,15 @@ priv void testfunction();
 @c "testfunction" not in c
 
 void testfunction();
+
+@test compile
+
+#include <cstdio>
+#include <vector>
+
+pub void printVector(const std::vector<int>& vec) {
+    for (int num : vec) {
+        printf("%d ", num);
+    }
+    printf("\n");
+}

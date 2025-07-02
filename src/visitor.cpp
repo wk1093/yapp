@@ -36,6 +36,31 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.isExternC = isExternC(cursor);
     info.kind = kind;
     info.namespaces = getNamespaceChain(cursor);
+    // --- TEMPLATE DETECTION ---
+    info.isTemplate = false;
+    // Mark as template if this is a template cursor kind
+    if (kind == CXCursor_FunctionTemplate ||
+        kind == CXCursor_ClassTemplate ||
+        kind == CXCursor_ClassTemplatePartialSpecialization ||
+        kind == CXCursor_TypeAliasTemplateDecl) {
+        info.isTemplate = true;
+    }
+    // Also mark as template if parent is a template
+    if (!info.isTemplate) {
+        CXCursor parent = clang_getCursorSemanticParent(cursor);
+        CXCursorKind pkind = clang_getCursorKind(parent);
+        if (pkind == CXCursor_FunctionTemplate ||
+            pkind == CXCursor_ClassTemplate ||
+            pkind == CXCursor_ClassTemplatePartialSpecialization ||
+            pkind == CXCursor_TypeAliasTemplateDecl) {
+            info.isTemplate = true;
+        }
+    }
+    // Also mark as template if it has template parameters
+    if (!info.isTemplate && clang_Cursor_getNumTemplateArguments(cursor) > 0) {
+        info.isTemplate = true;
+    }
+
     if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
         auto range = clang_Cursor_getSpellingNameRange(cursor, 0, 0);
         CXTranslationUnit tu = *(CXTranslationUnit*)client_data;

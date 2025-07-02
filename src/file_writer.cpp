@@ -1,10 +1,16 @@
 #include "file_writer.h"
 #include "visitor.h"
 #include "decl_utils.h"
+#include <clang-c/Index.h>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
 #include <algorithm>
+
+// Helper: check if a DeclInfo is a template (function or class)
+static bool isTemplateDecl(const DeclInfo& d) {
+    return d.isTemplate;
+}
 
 // Helper: emit decls with namespace handling
 static void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
@@ -67,7 +73,7 @@ static std::vector<DeclInfo> collectUniqueDecls() {
 static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
     std::vector<DeclInfo> pubDecls;
     for (const auto& d : seen) {
-        if (d.annotation == "pub") {
+        if (d.annotation == "pub" || isTemplateDecl(d)) {
             if (isAnonymousStruct(d)) {
                 continue;
             }
@@ -79,7 +85,8 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
                 continue;
             }
             DeclInfo copy = d;
-            if (d.isDefinition && !d.isInline &&
+            // For templates, always emit the full definition
+            if (!isTemplateDecl(d) && d.isDefinition && !d.isInline &&
                 (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod)) {
                 copy.code = makeDeclaration(d.code);
             }
@@ -110,6 +117,8 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
             d.kind == CXCursor_UnionDecl) {
             continue;
         }
+        // Do not emit template definitions in the source file
+        if (isTemplateDecl(d)) continue;
         if (d.annotation == "pub") {
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
