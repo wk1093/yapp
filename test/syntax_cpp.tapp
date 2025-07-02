@@ -1,0 +1,31 @@
+@test check
+@c "namespace foo" in h and "class Bar" in h
+@c "class Bar" not in c
+// Namespace and class
+namespace foo {
+    class Bar {
+        // foo::Bar
+    public:
+        int x;
+        void method();
+    };
+}
+
+@test check
+@c "template < typename T >" in h
+@c "template < typename T >" not in c
+
+// Template function
+namespace util {
+    template<typename T>
+    pub void print(const T& v) {
+        // foo::Bar
+    }
+}
+
+@test check
+@c "inline int add" in h
+@c "inline int add" not in c
+
+// Inline function
+inline int add(int a, int b) { return a + b; }

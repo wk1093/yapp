@@ -1,0 +1,23 @@
+@test check
+@c "pubfunc" in h
+@c "pubfunc" not in c
+
+pub void pubfunc();
+
+@test check
+@c "privfunc" not in h
+@c "privfunc" in c
+
+priv void privfunc() {}
+
+@test check
+@c "defaultfunc" in h
+@c "defaultfunc" in c
+
+void defaultfunc() {}
+
+@test check
+@c "pubstruct" in h
+@c "pubstruct" not in c
+
+pub struct pubstruct { int x; };

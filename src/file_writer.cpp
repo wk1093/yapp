@@ -140,7 +140,7 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
         }
         if (d.kind == CXCursor_TypedefDecl || d.kind == CXCursor_TypeAliasDecl ||
             d.kind == CXCursor_StructDecl || d.kind == CXCursor_EnumDecl ||
-            d.kind == CXCursor_UnionDecl) {
+            d.kind == CXCursor_UnionDecl || d.kind == CXCursor_ClassDecl) {
             continue;
         }
         // Do not emit template definitions in the source file

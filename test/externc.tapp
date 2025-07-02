@@ -1,0 +1,24 @@
+@test check
+@c "extern \"C\"" in h
+@c "extern \"C\"" not in c
+
+extern "C" pub void cfunc();
+
+@test check
+@c "extern \"C\"" in h
+@c "extern \"C\"" not in c
+
+namespace foo {
+    extern "C" pub void cfunc2();
+}
+
+@test check
+@c "extern \"C\"" in h
+@c "extern \"C\"" not in c
+
+namespace foo {
+    extern "C" {
+        pub void cfunc3();
+        pub void cfunc4();
+    }
+}

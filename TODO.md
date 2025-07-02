@@ -1,5 +1,6 @@
 - [x] Fix anonymous struct handling
 - [x] Fix typedefs for NON-anonymous structs
+- [ ] Class members are always inline right now, fix this
 - [ ] BIG: Template handling
 - [ ] Get C++ stdlib headers to work
 - [ ] Seaprate big functions into smaller more manageable ones

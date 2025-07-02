@@ -1,0 +1,23 @@
+@test check
+@c "anonstruct" in h
+@c "anonstruct" not in c
+
+struct anonstruct { int x; };
+
+@test check
+@c "typedefstruct" in h
+@c "typedefstruct" not in c
+
+typedef struct { int y; } typedefstruct;
+
+@test check
+@c "MYMACRO" not in h
+@c "MYMACRO" not in c
+@c "42" in c
+
+#define MYMACRO 42
+
+pub int main() {
+    int x = MYMACRO;
+    return x;
+}

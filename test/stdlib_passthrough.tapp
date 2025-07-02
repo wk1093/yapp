@@ -1,0 +1,17 @@
+@test check
+@c "size_t" in h
+@c "size_t" not in c
+
+#include <cstddef>
+
+@test check
+@c "std::vector" in h
+@c "std::vector" not in c
+
+#include <vector>
+
+@test check
+@c "printf" in h
+@c "printf" not in c
+
+#include <cstdio>
