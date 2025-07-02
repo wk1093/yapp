@@ -5,11 +5,24 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <iostream>
 
 std::vector<DeclInfo> decls;
 int orderCounter = 0;
 std::unordered_set<std::string> typedefBackedTags;
 std::vector<std::string> anonymousTypes;
+
+bool isTemplateType(CXCursorKind kind) {
+    return (kind == CXCursor_ClassTemplate ||
+            kind == CXCursor_ClassTemplatePartialSpecialization ||
+            kind == CXCursor_TypeAliasTemplateDecl ||
+            kind == CXCursor_FunctionTemplate ||
+            kind == CXCursor_TemplateTypeParameter ||
+            kind == CXCursor_TemplateTemplateParameter ||
+            kind == CXCursor_NonTypeTemplateParameter ||
+            kind == CXCursor_TemplateRef ||
+            kind == CXCursor_OverloadedDeclRef);
+}
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
@@ -50,20 +63,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     }
 
     // Mark as template if this is a template cursor kind
-    if (kind == CXCursor_FunctionTemplate ||
-        kind == CXCursor_ClassTemplate ||
-        kind == CXCursor_ClassTemplatePartialSpecialization ||
-        kind == CXCursor_TypeAliasTemplateDecl) {
+    if (isTemplateType(kind)) {
         info.isTemplate = true;
     }
     // Also mark as template if parent is a template
     if (!info.isTemplate) {
         CXCursor parent = clang_getCursorSemanticParent(cursor);
         CXCursorKind pkind = clang_getCursorKind(parent);
-        if (pkind == CXCursor_FunctionTemplate ||
-            pkind == CXCursor_ClassTemplate ||
-            pkind == CXCursor_ClassTemplatePartialSpecialization ||
-            pkind == CXCursor_TypeAliasTemplateDecl) {
+        if (isTemplateType(pkind)) {
             info.isTemplate = true;
         }
     }
@@ -113,6 +120,9 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
             }
             return CXChildVisit_Continue;
         }, &typedefBackedTags);
+    }
+    if (info.isTemplate && info.annotation == "") {
+        info.annotation = "pub";
     }
     decls.push_back(info);
     return CXChildVisit_Continue;

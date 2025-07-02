@@ -1,0 +1,8 @@
+@test check
+@c "namespace ns" in h
+@c "template < typename T >" in h
+
+namespace ns {
+    template<typename T>
+    pub void bar(T);
+}

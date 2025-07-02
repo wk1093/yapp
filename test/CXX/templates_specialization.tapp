@@ -1,0 +1,9 @@
+@test check
+@c "template < >" in h
+@c "template < >" not in c
+
+template<typename T>
+struct pub Foo { T x; };
+
+template<>
+struct pub Foo<int> { int x; };

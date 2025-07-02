@@ -1,0 +1,15 @@
+@test check
+@c "template < typename T >" in h
+@c "template < typename T >" not in c
+
+template<typename T>
+pub void foo(T);
+
+@test check
+@c "template < typename T >" in h
+@c "template < typename T >" not in c
+
+template<typename T>
+pub struct Bar {
+    T value;
+};

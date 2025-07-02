@@ -7,6 +7,8 @@ namespace testing {
     }
 }
 
+template < typename ... _Bn > inline constexpr bool __or_v = false ;
+
 pub int main() {
     printf("Hello, World!\n");
 

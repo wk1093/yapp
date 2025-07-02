@@ -1,0 +1,10 @@
+@test check
+@c "foo<int>" not in h
+@c "foo<int>" not in c
+
+template<typename T>
+pub void foo(T);
+
+pub void test() {
+    foo<int>(42);
+}

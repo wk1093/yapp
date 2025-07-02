@@ -1,0 +1,20 @@
+@test check
+@c "template < typename T >" not in h
+@c "template < typename T >" in c
+
+template<typename T>
+priv void hidden(T) {}
+
+@test check
+@c "template < typename T >" in h
+@c "template < typename T >" not in c
+
+template<typename T>
+pub void visible(T) {}
+
+@test check
+@c "template < typename T >" in h
+@c "template < typename T >" not in c
+
+template<typename T>
+void defaultviz(T) {}

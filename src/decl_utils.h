@@ -14,6 +14,7 @@ struct DeclInfo {
     bool isTemplate = false;
     bool isStatic = false;
     bool isExtern = false;
+    bool isConstexpr = false; // For C++20 constexpr variables
     CXCursorKind kind;
     int sourceOrderIndex = 0;
     std::vector<std::string> namespaces;

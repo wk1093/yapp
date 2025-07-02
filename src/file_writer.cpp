@@ -158,7 +158,7 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
             continue;
         }
         if (d.isStatic) continue; // skip static decls in header
-        if (d.annotation == "pub" || isTemplateDecl(d)) {
+        if (d.annotation == "pub") {
             if (isAnonymousStruct(d)) {
                 continue;
             }
@@ -175,7 +175,7 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
                 (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod)) {
                 copy.code = makeDeclaration(d.code);
             }
-            // For global variables, emit as extern in header (but not for anonymous types)
+            // For globals variables, emit as extern in header (but not for anonymous types)
             if (isGlobalVariable(d)) {
                 if (isAnonymousType(d)) {
                     // Skip anonymous types in header
@@ -223,7 +223,6 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
             continue;
         }
         // Do not emit template definitions in the source file
-        if (isTemplateDecl(d)) continue;
         // Skip anonymous structs in source as well
         if (isAnonymousStruct(d)) continue;
         // For priv global variables, only emit in source
@@ -232,6 +231,7 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
             continue;
         }
         if (d.annotation == "pub") {
+            if (isTemplateDecl(d)) continue;
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
             if (!d.isDefinition) continue;
