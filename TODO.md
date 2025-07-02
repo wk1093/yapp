@@ -1,5 +1,6 @@
-- [ ] Fix anonymous struct handling
-- [ ] Fix typedefs for NON-anonymous structs
+- [x] Fix anonymous struct handling
+- [x] Fix typedefs for NON-anonymous structs
+- [ ] BIG: Template handling
 - [ ] Get C++ stdlib headers to work
 - [ ] Seaprate big functions into smaller more manageable ones
 - [ ] Unit tests for simple behavior that should be easy to test (pub vs priv, default visibility, etc.)

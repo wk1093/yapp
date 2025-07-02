@@ -1,0 +1,32 @@
+@test compile // make sure the code compiles
+
+#include <cstdio>
+
+pub int main() {
+    printf("Hello, World!\n");
+    return 0;
+}
+
+@test compile
+
+#include <cstdio>
+#include <cstdlib>
+
+namespace testing {
+    pub void test() {
+        printf("Hello from Testing!\n");
+    }
+}
+
+pub int main() {
+    testing::test();
+    return 0;
+}
+
+@test check
+@h !h.contains("testfunction")
+@c c.contains("testfunction")
+
+priv void testfunction() {
+    printf("This is a private function.\n");
+}
