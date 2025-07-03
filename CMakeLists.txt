@@ -54,5 +54,6 @@ add_custom_target(yappc_test
     DEPENDS yappc_compile
     COMMENT "Testing YAPP"
     # Run the new yapp compiler on test files
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/runner.py
     )
