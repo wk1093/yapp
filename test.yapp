@@ -1,18 +1,5 @@
-#include <cstdio>
+//#include <cstdio>
 
 
-namespace testing {
-    priv void test() {
-        printf("Testing...\n");
-    }
-}
-
-template < typename ... _Bn > inline constexpr bool __or_v = false ;
-
-pub int main() {
-    printf("Hello, World!\n");
-
-    testing::test();
-
-    return 0;
-}
+template<typename... Args>
+inline constexpr bool test_value = false;

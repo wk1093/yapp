@@ -16,12 +16,79 @@ bool isTemplateType(CXCursorKind kind) {
     return (kind == CXCursor_ClassTemplate ||
             kind == CXCursor_ClassTemplatePartialSpecialization ||
             kind == CXCursor_TypeAliasTemplateDecl ||
-            kind == CXCursor_FunctionTemplate ||
-            kind == CXCursor_TemplateTypeParameter ||
-            kind == CXCursor_TemplateTemplateParameter ||
-            kind == CXCursor_NonTypeTemplateParameter ||
-            kind == CXCursor_TemplateRef ||
-            kind == CXCursor_OverloadedDeclRef);
+            kind == CXCursor_FunctionTemplate);
+}
+
+bool hasConstexprKeyword(CXCursor cursor) {
+    CXSourceRange range = clang_getCursorExtent(cursor);
+    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
+
+    CXToken* tokens = nullptr;
+    unsigned numTokens = 0;
+    clang_tokenize(tu, range, &tokens, &numTokens);
+
+    bool found = false;
+    for (unsigned i = 0; i < numTokens; ++i) {
+        CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
+        std::string tokenStr = clang_getCString(spelling);
+        clang_disposeString(spelling);
+
+        if (tokenStr == "constexpr") {
+            found = true;
+            break;
+        }
+    }
+
+    clang_disposeTokens(tu, tokens, numTokens);
+    return found;
+}
+
+bool hasTemplateKeyword(CXCursor cursor) {
+    CXSourceRange range = clang_getCursorExtent(cursor);
+    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
+
+    CXToken* tokens = nullptr;
+    unsigned numTokens = 0;
+    clang_tokenize(tu, range, &tokens, &numTokens);
+
+    bool found = false;
+    for (unsigned i = 0; i < numTokens; ++i) {
+        CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
+        std::string tokenStr = clang_getCString(spelling);
+        clang_disposeString(spelling);
+
+        if (tokenStr == "template") {
+            found = true;
+            break;
+        }
+    }
+
+    clang_disposeTokens(tu, tokens, numTokens);
+    return found;
+}
+
+bool hasConstKeyword(CXCursor cursor) {
+    CXSourceRange range = clang_getCursorExtent(cursor);
+    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
+
+    CXToken* tokens = nullptr;
+    unsigned numTokens = 0;
+    clang_tokenize(tu, range, &tokens, &numTokens);
+
+    bool found = false;
+    for (unsigned i = 0; i < numTokens; ++i) {
+        CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
+        std::string tokenStr = clang_getCString(spelling);
+        clang_disposeString(spelling);
+
+        if (tokenStr == "const") {
+            found = true;
+            break;
+        }
+    }
+
+    clang_disposeTokens(tu, tokens, numTokens);
+    return found;
 }
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
@@ -53,6 +120,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
     info.namespaces = getNamespaceChain(cursor);
     // Robust static detection for functions and variables
     info.isStatic = (clang_Cursor_getStorageClass(cursor) == CX_SC_Static);
+    info.isConst = hasConstKeyword(cursor);
     // --- TEMPLATE DETECTION ---
     info.isTemplate = false;
     info.typeUsr = "";
@@ -75,8 +143,33 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client
         }
     }
     // Also mark as template if it has template parameters
-    if (!info.isTemplate && clang_Cursor_getNumTemplateArguments(cursor) > 0) {
-        info.isTemplate = true;
+    if (!info.isTemplate) {
+        int templateParamCount = clang_Cursor_getNumArguments(cursor);
+        if (templateParamCount == -1) {
+            // not a callable, try children
+            clang_visitChildren(
+                cursor,
+                [](CXCursor c, CXCursor parent, CXClientData data) {
+                    CXCursorKind ck = clang_getCursorKind(c);
+                    if (isTemplateType(ck)) {
+                        bool* isTemplate = static_cast<bool*>(data);
+                        *isTemplate = true;
+                        return CXChildVisit_Break;
+                    }
+                    return CXChildVisit_Recurse;
+                },
+                &info.isTemplate
+            );
+        } else if (templateParamCount > 0) {
+            info.isTemplate = true;
+        }
+    }
+
+    if (!info.isTemplate && hasTemplateKeyword(cursor)) {
+        info.isTemplate = true; // If the cursor has a 'template' keyword, mark it as template
+    }
+    if (hasConstexprKeyword(cursor)) {
+        info.isConstexpr = true; // If the cursor has a 'constexpr' keyword, mark it as constexpr
     }
 
     if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {

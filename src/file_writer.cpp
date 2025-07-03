@@ -10,9 +10,6 @@
 #include <algorithm>
 
 // Helper: check if a DeclInfo is a template (function or class)
-static bool isTemplateDecl(const DeclInfo& d) {
-    return d.isTemplate;
-}
 
 // Helper: emit decls with namespace and extern "C" grouping, with strict nesting
 static void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
@@ -171,7 +168,7 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
             }
             DeclInfo copy = d;
             // For templates, always emit the full definition
-            if (!isTemplateDecl(d) && d.isDefinition && !d.isInline &&
+            if (!d.isTemplate && !d.isConstexpr && !d.isConst && d.isDefinition && !d.isInline &&
                 (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod)) {
                 copy.code = makeDeclaration(d.code);
             }
@@ -231,7 +228,9 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
             continue;
         }
         if (d.annotation == "pub") {
-            if (isTemplateDecl(d)) continue;
+            if (d.isTemplate) continue;
+            if (d.isConstexpr) continue; // Skip constexpr variables in source
+            // if (d.isConst) continue;
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
             if (!d.isDefinition) continue;
