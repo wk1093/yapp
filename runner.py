@@ -79,11 +79,11 @@ def run_test(test, test_dir):
             print(f"{test_line_info} compile... ", end='')
             log_file.write(f"Starting compilation...\nTest source: {test[0]} line {test[2]}\n")
             try:
-                args1 = [yappc_path, os.path.join(test_dir, "test.yapp")]
+                args1 = [yappc_path, os.path.join(test_dir, "test.yapp"), "-c"]
                 if debug:
-                    args1.append("-d")
-                else:
                     args1.append("-g")
+                else:
+                    args1.append("-s")
                 args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
                 log_file.write(f"Running command: {' '.join(args)}\n")
                 subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
@@ -101,11 +101,11 @@ def run_test(test, test_dir):
             log_file.write(f"Starting compilation for check...\nTest source: {test[0]} line {test[2]}\n")
             compile_failed = False
             try:
-                args1 = [yappc_path, os.path.join(test_dir, "test.yapp")]
+                args1 = [yappc_path, os.path.join(test_dir, "test.yapp"), "-c"]
                 if debug:
-                    args1.append("-d")
-                else:
                     args1.append("-g")
+                else:
+                    args1.append("-s")
                 args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
                 log_file.write(f"Running command: {' '.join(args)}\n")
                 subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)

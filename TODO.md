@@ -1,7 +1,11 @@
 - [x] Fix anonymous struct handling
 - [x] Fix typedefs for NON-anonymous structs
-- [ ] Class members are always inline right now, fix this
+- [x] Class members are always inline right now, fix this
 - [ ] BIG: Template handling
-- [ ] Get C++ stdlib headers to work
-- [ ] Seaprate big functions into smaller more manageable ones
-- [ ] Unit tests for simple behavior that should be easy to test (pub vs priv, default visibility, etc.)
+- [x] Get C++ stdlib headers to work: just use #pub include for most things
+- [x] Separate big functions into smaller more manageable ones
+- [x] Unit tests for simple behavior that should be easy to test (pub vs priv, default visibility, etc.)
+- [ ] Add more unit tests
+- [ ] Custom inclusion system for including another yapp file instead of using #include "myfile.yapp.h"
+- [ ] Build system that will automatically build dependencies of the main yapp file
+

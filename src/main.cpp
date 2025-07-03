@@ -45,10 +45,12 @@ std::string prePreprocess(const std::string& inputFile, const std::string& outpu
 const char* usageString = R"(
 Usage: yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]
 Options:
-    -d          Enable debug mode (keep intermediate files)
-    -g          Show generated .yapp.cpp and .yapp.h files (but not other intermediate files)
+    -s          Toggle whether the source file is left in the output. This is useful for debugging.
+    -g          Show generated intermediate preprocessing files.
     -h          Show this help message
     -o <output> Specify output folder for generated files (default: same as input file)
+    -r          Remove the header from the generated .yapp.cpp file (not very useful)
+    -c          Compile the generated files.
     --          Separator for different argument sections
 Preprocessor Args:
     These arguments are passed directly to the preprocessor (clang -E).
@@ -96,16 +98,17 @@ int main(int argc, char** argv) {
     }
     // Check for -d option in myArgs
     bool debugMode = false;
-    bool showGenerated = false;
+    bool sourceToggle = false;
     bool removeHeader = false;
+    bool compileGenerated = false;
     std::string outputDir = ""; // Default to same directory as input file
     for (int i = 0; i < myArgs.size(); i++) {
         std::string arg = myArgs[i];
-        if (arg == "-d") {
-            debugMode = true;
+        if (arg == "-s") {
+            sourceToggle = true;
         }
         if (arg == "-g") {
-            showGenerated = true;
+            debugMode = true;
         }
         if (arg == "-h") {
             std::cout << usageString;
@@ -134,6 +137,10 @@ int main(int argc, char** argv) {
         if (arg == "-r") {
             // Handle remove header option
             removeHeader = true;
+        }
+        if (arg == "-c") {
+            // Handle compile generated files option
+            compileGenerated = true;
         }
     }
 
@@ -222,27 +229,30 @@ int main(int argc, char** argv) {
     writeFiles(filename, outputDir);
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
-    std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
-    std::string compileCommand = "clang++ \"" + outdirfilename + "\" ";
-    for (const auto& arg : compileArgs) {
-        compileCommand += "\"" + arg + "\" ";
-    }
-    if (system(compileCommand.c_str()) != 0) {
-        std::cerr << "Compilation failed.\n";
-        return 1;
+    if (compileGenerated) {
+        std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
+        std::string compileCommand = "clang++ \"" + outdirfilename + "\" ";
+        for (const auto& arg : compileArgs) {
+            compileCommand += "\"" + arg + "\" ";
+        }
+        if (system(compileCommand.c_str()) != 0) {
+            std::cerr << "Compilation failed.\n";
+            return 1;
+        }
     }
 
     if (!debugMode) {
         // remove intermediate files
         std::remove(preprocOutputFile.c_str());
         std::remove(pubppFile.c_str());
-        if (!showGenerated) {
+
+        if ((!compileGenerated && sourceToggle) || (compileGenerated && !sourceToggle)) {
             std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.cpp")).c_str());
         }
-    }
 
-    if (removeHeader) {
-        std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.h")).c_str());
+        if (removeHeader) {
+            std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.h")).c_str());
+        }
     }
 
     return 0;
