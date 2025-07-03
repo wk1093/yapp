@@ -7,3 +7,11 @@ Whether something is in the "header" or "public" section is determined by the `p
 There is some exceptions and special cases to this rule. `inline` functions are always considered public.
 
 Default behavior (`pub` and `priv` not specified) is different depending on many things, such as whether it is a function, variable, or type. As well as if it is a declaration or definition.
+
+## Root Directory Structure
+
+- `/src/`: Contains the original source code for the YAPP compiler (in C++).
+- `/srcyapp/`: Contains the new WIP (Work In Progress) source code for the YAPP compiler (using YAPP itself *yay*).
+- `/test/`: Contains test files to be used with the runner.py to test language features.
+- `/test.yapp`: A main testing file that is used to mess around with the language and test various features. This is normally ran manually to test new features and fix bugs.
+- `/runner.py`: A Python script that runs the YAPP compiler on test files and checks for expected output.
