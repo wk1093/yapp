@@ -117,6 +117,7 @@ def run_test(test, test_dir):
                 any_failed = True
     elif "check" in test_code[0]:
         nocompile = any(line.lstrip().startswith("@nocompile") for line in test_code)
+        nocompile_nowarn = any(line.lstrip().startswith("@nocompile nowarn") for line in test_code)
         with open(os.path.join(test_dir, "check.log"), 'w') as log_file:
             log_file.write(f"Starting compilation for check...\nTest source: {test[0]} line {test[2]}\n")
             compile_failed = False
@@ -179,7 +180,7 @@ def run_test(test, test_dir):
                     all_conditions_met = False
             if all_conditions_met:
                 log_file.write("All conditions met.\n")
-                if compile_failed:
+                if compile_failed and not nocompile_nowarn:
                     print_test_result(test[0], test[2], test_index, "check", "WARN: Compile failed", test_dir)
                 else:
                     print_test_result(test[0], test[2], test_index, "check", "OK", test_dir)

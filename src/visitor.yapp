@@ -3,7 +3,7 @@
 #import <string>
 #import <unordered_set>
 #import <cstring>
-#import "decl_utils.yapp.h"
+#import "decl_utils.yapp"
 
 pub std::vector<DeclInfo> decls;
 pub int orderCounter = 0;

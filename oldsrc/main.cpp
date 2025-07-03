@@ -28,7 +28,33 @@ std::string prePreprocess(const std::string& inputFile, const std::string& outpu
             preprocStored.push_back(m[1].str());
             out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
         } else if (std::regex_search(line, m, importPreproc)) {
-            preprocStored.push_back("include " + m[1].str());
+            std::string importedFile = m[1].str();
+            // if it is "something.yapp" or <something.yapp> we need to convert it to "something.yapp.h" or <something.yapp.h>
+            
+            bool angledQuotes = (importedFile[0] == '<' && importedFile[importedFile.size() - 1] == '>');
+            bool doubleQuotes = (importedFile[0] == '"' && importedFile[importedFile.size() - 1] == '"');
+            if (angledQuotes || doubleQuotes) {
+                // Remove the angled or double quotes
+                importedFile = importedFile.substr(1, importedFile.size() - 2);
+            }
+            if (importedFile.find(".yapp") != std::string::npos) {
+                importedFile = importedFile.substr(0, importedFile.find_last_of('.')) + ".yapp.h";
+            }
+            if (angledQuotes) {
+                importedFile = "<" + importedFile + ">";
+            } else if (doubleQuotes) {
+                importedFile = "\"" + importedFile + "\"";
+            } else {
+                if (importedFile.find('.') == std::string::npos) {
+                    // If there is no extension, we assume it's a .yapp file and convert to .yapp.h
+                    importedFile = "<" + importedFile + ".yapp.h>";
+
+                } else {
+                    importedFile = "\"" + importedFile + "\"";
+                }
+            }
+            
+            preprocStored.push_back("include " + importedFile);
             out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
         } else {
             out << line << "\n";

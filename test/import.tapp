@@ -1,0 +1,31 @@
+@test check
+@nocompile nowarn
+@c "size_t" not in h
+@c "<stdio.h>" in h
+@c "stdio.h" not in c
+
+#import <stdio.h>
+
+@test check
+@nocompile nowarn
+@c "\"testing.yapp.h\"" in h
+
+#import "testing.yapp"
+
+@test check
+@nocompile nowarn
+@c "\"stdio.h\"" in h
+
+#import stdio.h
+
+@test check
+@nocompile nowarn
+@c "<mylib.yapp.h>" in h
+
+#import mylib
+
+@test check
+@nocompile nowarn
+@c "\"mylib.yapp.h\"" in h
+
+#import mylib.yapp
