@@ -1,25 +1,23 @@
-#include "visitor.h"
-#include "decl_utils.h"
-#include <cstring>
-#include <clang-c/Index.h>
-#include <string>
-#include <vector>
-#include <unordered_set>
-#include <iostream>
+#pub include <clang-c/Index.h>
+#pub include <vector>
+#pub include <string>
+#pub include <unordered_set>
+#pub include <cstring>
+#pub include "decl_utils.yapp.h"
 
-std::vector<DeclInfo> decls;
-int orderCounter = 0;
-std::unordered_set<std::string> typedefBackedTags;
-std::vector<std::string> anonymousTypes;
+pub std::vector<DeclInfo> decls;
+pub int orderCounter = 0;
+pub std::unordered_set<std::string> typedefBackedTags;
+pub std::vector<std::string> anonymousTypes;
 
-bool isTemplateType(CXCursorKind kind) {
+priv bool isTemplateType(CXCursorKind kind) {
     return (kind == CXCursor_ClassTemplate ||
             kind == CXCursor_ClassTemplatePartialSpecialization ||
             kind == CXCursor_TypeAliasTemplateDecl ||
             kind == CXCursor_FunctionTemplate);
 }
 
-bool hasConstexprKeyword(CXCursor cursor) {
+priv bool hasConstexprKeyword(CXCursor cursor) {
     CXSourceRange range = clang_getCursorExtent(cursor);
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
     CXToken* tokens = nullptr;
@@ -44,13 +42,9 @@ bool hasConstexprKeyword(CXCursor cursor) {
     }
     clang_disposeTokens(tu, tokens, numTokens);
     return found;
-
-    
-    
-
 }
 
-bool hasTemplateKeyword(CXCursor cursor) {
+priv bool hasTemplateKeyword(CXCursor cursor) {
     CXSourceRange range = clang_getCursorExtent(cursor);
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
 
@@ -80,7 +74,7 @@ bool hasTemplateKeyword(CXCursor cursor) {
     return found;
 }
 
-bool hasConstKeyword(CXCursor cursor) {
+priv bool hasConstKeyword(CXCursor cursor) {
     CXSourceRange range = clang_getCursorExtent(cursor);
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
 
@@ -110,7 +104,7 @@ bool hasConstKeyword(CXCursor cursor) {
     return found;
 }
 
-CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
+pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
     if (!clang_isDeclaration(kind)) return CXChildVisit_Recurse;
     if (kind == CXCursor_LinkageSpec || kind == CXCursor_Namespace) {

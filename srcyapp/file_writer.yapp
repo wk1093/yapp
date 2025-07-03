@@ -1,18 +1,16 @@
-#include "file_writer.h"
-#include "visitor.h"
-#include "decl_utils.h"
-#include <clang-c/Index.h>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <unordered_map>
-#include <algorithm>
+#pub include <clang-c/Index.h>
+#pub include <cstring>
+#pub include <filesystem>
+#pub include <fstream>
+#pub include <iostream>
+#pub include <unordered_map>
+#pub include <algorithm>
+#pub include <string>
 
-// Helper: check if a DeclInfo is a template (function or class)
+#pub include "visitor.yapp.h"
+#pub include "decl_utils.yapp.h"
 
-// Helper: emit decls with namespace and extern "C" grouping, with strict nesting
-static void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
+priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
     std::vector<std::string> currentNS;
     bool inExternC = false;
     for (size_t idx = 0; idx < decls.size(); ++idx) {
@@ -67,7 +65,7 @@ static void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& d
 }
 
 // Helper: collect unique decls by USR
-static std::vector<DeclInfo> collectUniqueDecls() {
+priv std::vector<DeclInfo> collectUniqueDecls() {
     std::vector<DeclInfo> seen;
     std::unordered_map<std::string, size_t> usrToIndex;
     for (auto& d : decls) {
@@ -95,7 +93,7 @@ static std::vector<DeclInfo> collectUniqueDecls() {
 }
 
 // Helper: check if a DeclInfo is a global variable
-static bool isGlobalVariable(const DeclInfo& d) {
+priv bool isGlobalVariable(const DeclInfo& d) {
     // Not a function, not a type, not static, not anonymous, and not a member
     return !d.isStatic && !isAnonymousStruct(d) &&
         d.kind == CXCursor_VarDecl &&
@@ -104,7 +102,7 @@ static bool isGlobalVariable(const DeclInfo& d) {
 
 // Helper: check if the DeclInfo's type is an anonymous struct/union/enum
 template<typename T>
-static bool isAnonymousTypeCursor(T cursor) {
+priv bool isAnonymousTypeCursor(T cursor) {
     if (!clang_Cursor_isNull(cursor)) {
         CXString spelling = clang_getCursorSpelling(cursor);
         bool anon = !clang_getCString(spelling) || !*clang_getCString(spelling);
@@ -117,9 +115,7 @@ static bool isAnonymousTypeCursor(T cursor) {
     return false;
 }
 
-extern std::vector<std::string> anonymousTypes; // from visitor.cpp
-
-bool isAnonymousType(const DeclInfo& d) {
+priv bool isAnonymousType(const DeclInfo& d) {
 
     if (d.typeUsr.empty()) {
         // If we don't have a type USR, we can't check for anonymous types
@@ -133,10 +129,10 @@ bool isAnonymousType(const DeclInfo& d) {
     return false;
 }
 
-extern std::vector<std::string> preprocStored; // from main.cpp
+priv extern std::vector<std::string> preprocStored; // from main.cpp
 
 // Helper: collect public decls for header
-static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
+priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
     std::vector<DeclInfo> pubDecls;
     for (const auto& d : seen) {
         // if name startswith "__pub_preproc__", special case
@@ -202,7 +198,7 @@ static std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& see
 }
 
 // Helper: collect source decls for cpp file
-static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen) {
+priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen) {
     std::unordered_map<std::string, bool> pubHasDefinition;
     for (const auto& d : seen) {
         if (d.annotation == "pub" && d.isDefinition) {
@@ -244,7 +240,7 @@ static std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& see
     return sourceDecls;
 }
 
-void writeFiles(const std::string& base, const std::string& dir) {
+pub void writeFiles(const std::string& base, const std::string& dir) {
     std::ofstream hfile(std::filesystem::path(dir) / (base + ".yapp.h"));
     std::ofstream cppfile(std::filesystem::path(dir) / (base + ".yapp.cpp"));
     hfile << "#pragma once\n";

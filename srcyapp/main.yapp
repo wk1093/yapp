@@ -1,17 +1,17 @@
-#include "file_writer.h"
-#include "visitor.h"
-#include <filesystem>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstring>
-#include <regex>
+#pub include "file_writer.yapp.h"
+#pub include "visitor.yapp.h"
+#pub include <filesystem>
+#pub include <vector>
+#pub include <string>
+#pub include <iostream>
+#pub include <fstream>
+#pub include <sstream>
+#pub include <cstring>
+#pub include <regex>
 
-std::vector<std::string> preprocStored;
+pub std::vector<std::string> preprocStored;
 
-std::string prePreprocess(const std::string& inputFile, const std::string& outputDir) {
+pub std::string prePreprocess(const std::string& inputFile, const std::string& outputDir) {
     std::ifstream in(inputFile);
     if (!in) {
         std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
@@ -42,7 +42,7 @@ std::string prePreprocess(const std::string& inputFile, const std::string& outpu
     return outFile;
 }
 
-const char* usageString = R"(
+priv const char* usageString = R"(
 Usage: yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]
 Options:
     -d          Enable debug mode (keep intermediate files)
@@ -58,7 +58,7 @@ Compiler Args:
     You can use -o to specify the output file.
 )";
 
-int main(int argc, char** argv) {
+pub int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Usage: ./yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]\n";
         return 1;

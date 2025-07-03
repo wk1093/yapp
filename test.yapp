@@ -1,5 +1,6 @@
-//#include <cstdio>
+#pub include <vector>
 
-
-template<typename... Args>
-inline constexpr bool test_value = false;
+int main() {
+    std::vector<int> myVector;
+    return 0;
+}

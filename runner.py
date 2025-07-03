@@ -6,6 +6,8 @@ import time
 
 debug = True
 
+yappc_path = "./build/custom/yappc"
+
 if len(sys.argv) > 1 and sys.argv[1] == "nodbg":
     debug = False
 
@@ -77,7 +79,7 @@ def run_test(test, test_dir):
             print(f"{test_line_info} compile... ", end='')
             log_file.write(f"Starting compilation...\nTest source: {test[0]} line {test[2]}\n")
             try:
-                args1 = ["./build/yappc", os.path.join(test_dir, "test.yapp")]
+                args1 = [yappc_path, os.path.join(test_dir, "test.yapp")]
                 if debug:
                     args1.append("-d")
                 else:
@@ -99,7 +101,7 @@ def run_test(test, test_dir):
             log_file.write(f"Starting compilation for check...\nTest source: {test[0]} line {test[2]}\n")
             compile_failed = False
             try:
-                args1 = ["./build/yappc", os.path.join(test_dir, "test.yapp")]
+                args1 = [yappc_path, os.path.join(test_dir, "test.yapp")]
                 if debug:
                     args1.append("-d")
                 else:
