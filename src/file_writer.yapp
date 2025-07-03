@@ -1,14 +1,14 @@
-#pub include <clang-c/Index.h>
-#pub include <cstring>
-#pub include <filesystem>
-#pub include <fstream>
-#pub include <iostream>
-#pub include <unordered_map>
-#pub include <algorithm>
-#pub include <string>
+#import <clang-c/Index.h>
+#import <cstring>
+#import <filesystem>
+#import <fstream>
+#import <iostream>
+#import <unordered_map>
+#import <algorithm>
+#import <string>
 
-#pub include "visitor.yapp.h"
-#pub include "decl_utils.yapp.h"
+#import "visitor.yapp.h"
+#import "decl_utils.yapp.h"
 
 priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
     std::vector<std::string> currentNS;

@@ -1,9 +1,9 @@
-#pub include <clang-c/Index.h>
-#pub include <vector>
-#pub include <string>
-#pub include <unordered_set>
-#pub include <cstring>
-#pub include "decl_utils.yapp.h"
+#import <clang-c/Index.h>
+#import <vector>
+#import <string>
+#import <unordered_set>
+#import <cstring>
+#import "decl_utils.yapp.h"
 
 pub std::vector<DeclInfo> decls;
 pub int orderCounter = 0;

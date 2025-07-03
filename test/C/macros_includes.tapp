@@ -18,3 +18,14 @@ pub int main() {
     printf("Hello, World!\n");
     return 0;
 }
+
+@test check
+@c "stdio.h" in h
+@c "stdio.h" not in c
+
+#import <stdio.h>
+
+pub int main() {
+    printf("Hello, World with #import!\n");
+    return 0;
+}

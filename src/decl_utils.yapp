@@ -1,8 +1,8 @@
-#pub include <clang-c/Index.h>
-#pub include <string>
-#pub include <vector>
-#pub include <cstring>
-#pub include <algorithm>
+#import <clang-c/Index.h>
+#import <string>
+#import <vector>
+#import <cstring>
+#import <algorithm>
 
 struct pub DeclInfo {
     std::string name;

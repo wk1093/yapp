@@ -21,12 +21,16 @@ std::string prePreprocess(const std::string& inputFile, const std::string& outpu
     std::string line;
 
     std::regex pubPreproc(R"(^\s*#pub\s+(.*?)$)");
+    std::regex importPreproc(R"(^\s*#import\s+(.*?)$)"); // #import X should act like #pub include X
     while (std::getline(in, line)) {
         std::smatch m;
         if (std::regex_search(line, m, pubPreproc)) {
             preprocStored.push_back(m[1].str());
             out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
-        }else {
+        } else if (std::regex_search(line, m, importPreproc)) {
+            preprocStored.push_back("include " + m[1].str());
+            out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
+        } else {
             out << line << "\n";
         }
     }
