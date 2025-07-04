@@ -13,5 +13,6 @@ Default behavior (`pub` and `priv` not specified) is different depending on many
 - `/oldsrc/`: Contains the old source code for the YAPP compiler (in C++).
 - `/src/`: Contains the new WIP (Work In Progress) source code for the YAPP compiler (using YAPP itself *yay*).
 - `/test/`: Contains test files to be used with the runner.py to test language features.
+- `/stdib/`: Contains standard library files for YAPP, which provide basic functionality and utilities.
 - `/test.yapp`: A main testing file that is used to mess around with the language and test various features. This is normally ran manually to test new features and fix bugs.
 - `/runner.py`: A Python script that runs the YAPP compiler on test files and checks for expected output.
