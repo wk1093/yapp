@@ -31,6 +31,22 @@ target_link_libraries(yappc PRIVATE Threads::Threads)
 # this is meant to replace the old shell script and add "suopport" for yapp in CMake
 
 set(YAPP_OLD_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/yappc")
+
+add_custom_target(yapp_stdlib
+    DEPENDS yappc
+    COMMENT "Compiling YAPP standard library"
+    
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    # compile the standard library yapp sources into c++
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/io.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.yapp.cpp -Wno-attributes
+    COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o -Wl,-soname,libyapp.so -Wl,--no-undefined
+)
+
+set(YAPP_COMPILER_FLAGS "-I${CMAKE_CURRENT_BINARY_DIR}/stdlib")
+set(YAPP_LINK_FLAGS "-L${CMAKE_CURRENT_BINARY_DIR}/stdlib -lyapp")
+
 add_custom_target(yappc_compile
     DEPENDS yappc
     COMMENT "Compiling YAPP"
@@ -42,16 +58,17 @@ add_custom_target(yappc_compile
     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/file_writer.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/decl_utils.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
     # compile the generated c++ files
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.yapp.cpp -lclang -Wno-attributes
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.yapp.cpp -lclang -Wno-attributes
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.yapp.cpp -lclang -Wno-attributes
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.yapp.cpp -lclang -Wno-attributes
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/main.yapp.cpp -lclang -Wno-attributes
     # link the generated c++ files into a new yapp compiler
-    COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/custom/yappc ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o -lclang
+    COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/custom/yappc ${YAPP_LINK_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o -lclang
 )
 
 add_custom_target(yappc_test
     DEPENDS yappc_compile
+    DEPENDS yapp_stdlib
     COMMENT "Testing YAPP"
     # Run the new yapp compiler on test files
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

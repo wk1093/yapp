@@ -1,8 +1,8 @@
+@test compile
+
 #import io
 
-using namespace yapp;
-
-int main() {
+pub int main() {
     yapp::print("Hello, World!\n");
 
     return 0;

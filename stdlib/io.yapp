@@ -1,0 +1,17 @@
+#import <iostream>
+
+namespace yapp {
+    // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
+    template<typename... Args>
+    void print(Args... args) {
+        // Using fold expression to handle multiple arguments
+        (void)std::initializer_list<int>{(std::cout << args, 0)...};
+    }
+
+    template<typename... Args>
+    void println(Args... args) {
+        // Using fold expression to handle multiple arguments
+        (void)std::initializer_list<int>{(std::cout << args, 0)...};
+        std::cout << std::endl; // Add a newline at the end
+    }
+}

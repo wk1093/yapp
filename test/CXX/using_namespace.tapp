@@ -1,0 +1,5 @@
+@test compile
+
+#import <iostream>
+
+priv using namespace std;

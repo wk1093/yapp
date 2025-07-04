@@ -13,7 +13,7 @@ pub int main() {
 #include <cstdlib>
 
 namespace testing {
-    pub void test() {
+    priv void test() {
         printf("Hello from Testing!\n");    
     }
 }

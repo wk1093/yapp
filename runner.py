@@ -105,7 +105,7 @@ def run_test(test, test_dir):
                     args1.append("-g")
                 else:
                     args1.append("-s")
-                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
+                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o"), "-I", "./build/stdlib/", "-L", "./build/stdlib/", "-lyapp"]
                 log_file.write(f"Running command: {' '.join(args)}\n")
                 subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful.\n")
@@ -127,7 +127,7 @@ def run_test(test, test_dir):
                     args1.append("-g")
                 else:
                     args1.append("-s")
-                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o")]
+                args = args1 + ["--", "--", "-c", "-o", os.path.join(test_dir, "test.o"), "-I", "./build/stdlib/", "-L", "./build/stdlib/", "-lyapp"]
                 log_file.write(f"Running command: {' '.join(args)}\n")
                 subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful for check.\n")
