@@ -213,9 +213,11 @@ def run_test(test, test_dir):
 
 def run_tests(test):
     for i in range(test[1]):
-        os.makedirs(os.path.join("test_output", os.path.splitext(os.path.basename(test[0]))[0], str(i)), exist_ok=True)
+        test_dir = os.path.join("test_output", os.path.dirname(test[0]).replace(os.path.sep, ".") + "." + os.path.splitext(os.path.basename(test[0]))[0], str(i))
+
+        os.makedirs(test_dir, exist_ok=True)
         # Pass the line number for this test
-        run_test((test[0], i+1, test[2][i]), os.path.join("test_output", os.path.splitext(os.path.basename(test[0]))[0], str(i)))
+        run_test((test[0], i+1, test[2][i]), test_dir)
 
 shutil.rmtree("test_output", ignore_errors=True)  # Clean up previous test outputs 
 time.sleep(1)

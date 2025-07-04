@@ -11,6 +11,8 @@
 #import "decl_utils.yapp"
 
 priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
+    out << "// Emitted by yappc\n";
+    out << "// Emitting " << decls.size() << " declarations\n\n";
     std::vector<std::string> currentNS;
     bool inExternC = false;
     for (size_t idx = 0; idx < decls.size(); ++idx) {

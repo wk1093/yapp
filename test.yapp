@@ -1,9 +1,8 @@
 #import io
 
-using namespace yapp;
-
-int main() {
-    yapp::print("Hello, World!\n");
+pub int main() {
+    io::println("Hello, World!");
 
     return 0;
 }
+

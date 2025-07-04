@@ -1,6 +1,6 @@
 #import <iostream>
 
-namespace yapp {
+namespace io {
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
     template<typename... Args>
     void print(Args... args) {

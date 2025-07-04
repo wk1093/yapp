@@ -60,16 +60,64 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
             out << line << "\n";
         }
     }
-    // std::string outFile = inputFile + ".pubpp";
-    std::string outFile = std::filesystem::path(outputDir) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pubpp");
-    std::ofstream pubpp(outFile);
-    if (!pubpp) {
+    std::string outFile = std::filesystem::path(outputDir) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
+    std::ofstream p0f(outFile);
+    if (!p0f) {
         std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
         exit(1);
     }
-    pubpp << out.str();
-    pubpp.close();
+    p0f << out.str();
+    p0f.close();
     return outFile;
+}
+
+pub std::string preprocessStep2(const std::string& p0File, const std::string& outputDir) {
+    std::ifstream in(p0File);
+    if (!in) {
+        std::cerr << "Failed to open pre-preprocessed file for second preprocessing: " << p0File << "\n";
+        exit(1);
+    }
+    std::ostringstream out;
+    std::string line;
+
+    // should match using namespace X::Y; but also match pub using namespace X::Y; and priv using namespace X::Y;
+    // also doesn't need to be at the start of the line
+    std::regex usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
+    // with the custom import system, sometimes clang will remove using directives because "the namespace doesn't exist"
+    // but we need to keep them
+    while (std::getline(in, line)) {
+        std::smatch m;
+        if (std::regex_search(line, m, usingNamespaceFix)) {
+            // We found a using namespace directive
+            // We need to check if it is a pub or priv using namespace directive
+            // If it is, we need to add the pub/priv attribute to the declaration
+            std::string attr = m[1].str(); // "pub" or "priv"
+            std::string namespaceName = m[2].str(); // the namespace name
+            // we add namespace NAME {} to make sure the namespace is defined
+            // This is a workaround for the issue where clang removes using directives
+            out << "namespace " << namespaceName << " {};\n"; // Ensure the namespace is defined
+            // If attr is empty, we assume it's a normal using directive
+            if (attr.empty()) {
+                out << "using namespace " << namespaceName << ";\n";
+            } else {
+                out << attr << " using namespace " << namespaceName << ";\n";
+            }
+        } else {
+            out << line << "\n";
+        }
+    }
+    std::string outFile = std::filesystem::path(outputDir) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
+    std::ofstream p1f(outFile);
+    if (!p1f) {
+        std::cerr << "Failed to write second preprocessed file: " << outFile << "\n";
+        exit(1);
+    }
+    p1f << out.str();
+    p1f.close();
+    return outFile;
+
+
+
 }
 
 priv const char* usageString = R"(
@@ -184,14 +232,12 @@ pub int main(int argc, char** argv) {
     }
 
     // pre-preprocessor step
-    std::string pubppFile = prePreprocess(argv[1], outputDir);
+    std::string step0File = prePreprocess(argv[1], outputDir);
+    std::string step1File = preprocessStep2(step0File, outputDir);
     // preprocessor step
-    std::string preprocOutputFile = pubppFile;
-    if (preprocOutputFile.find(".yapp.pubpp") == std::string::npos) {
-        std::cerr << "Input file must have .yapp extension.\n";
-        return 1;
-    }
-    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 6) + ".pyapp";
+    std::string preprocOutputFile = step1File;
+
+    preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 2) + ".pp2"; // Change extension to .yapp.cpp for the preprocessed output
     std::string preprocCommand = "clang -E ";
     for (const auto& arg : preprocArgs) {
         preprocCommand += "\"" + arg + "\" ";
@@ -199,7 +245,7 @@ pub int main(int argc, char** argv) {
     preprocCommand += "\"-Dpub=__attribute__((annotate(\\\"pub\\\")))\" ";
     preprocCommand += "\"-Dpriv=__attribute__((annotate(\\\"priv\\\")))\" ";
     preprocCommand += "-D__yaplusplus ";
-    preprocCommand += "-x c++ \"" + pubppFile + "\" > \"" + preprocOutputFile + "\"";
+    preprocCommand += "-x c++ \"" + step1File + "\" > \"" + preprocOutputFile + "\"";
     if (system(preprocCommand.c_str()) != 0) {
         std::cerr << "Preprocessing failed.\n";
         return 1;
@@ -275,7 +321,8 @@ pub int main(int argc, char** argv) {
     if (!debugMode) {
         // remove intermediate files
         std::remove(preprocOutputFile.c_str());
-        std::remove(pubppFile.c_str());
+        std::remove(step1File.c_str());
+        std::remove(step0File.c_str());
 
         if ((!compileGenerated && sourceToggle) || (compileGenerated && !sourceToggle)) {
             std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.cpp")).c_str());

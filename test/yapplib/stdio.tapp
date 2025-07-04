@@ -3,7 +3,7 @@
 #import io
 
 pub int main() {
-    yapp::print("Hello, World!\n");
+    io::println("Hello, World!");
 
     return 0;
 }

@@ -1,0 +1,47 @@
+@test check
+@c "using" in h
+@c "using" not in c
+
+#import <iostream>
+
+using namespace std;
+
+@test check
+@c "using" not in h
+@c "using" in c
+
+#import <iostream>
+
+priv using namespace std;
+
+@test check
+@c "using" in h
+@c "using" not in c
+
+#import <iostream>
+
+pub using namespace std;
+
+@test check
+@c "using" in h
+@c "using" not in c
+
+#import io
+
+using namespace io;
+
+@test check
+@c "using" not in h
+@c "using" in c
+
+#import io
+
+priv using namespace io;
+
+@test check
+@c "using" in h
+@c "using" not in c
+
+#import io
+
+pub using namespace io;
