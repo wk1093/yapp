@@ -6,6 +6,6 @@
 - [x] Separate big functions into smaller more manageable ones
 - [x] Unit tests for simple behavior that should be easy to test (pub vs priv, default visibility, etc.)
 - [ ] Add more unit tests
-- [ ] Custom inclusion system for including another yapp file instead of using #include "myfile.yapp.h"
-- [ ] Build system that will automatically build dependencies of the main yapp file
-
+- [x] Custom inclusion system for including another yapp file instead of using #include "myfile.yapp.h"
+- [ ] maybe? Build system that will automatically build dependencies of the main yapp file
+- [ ] BIG: Fix "using" to be default private and work properly.
