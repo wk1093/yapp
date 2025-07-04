@@ -10,3 +10,4 @@
 - [ ] maybe? Build system that will automatically build dependencies of the main yapp file
 - [x] BIG: Fix "using" to be default private and work properly.
 - [ ] HUGE: Ensure ALL C++ language features work correctly. combining advanced C++ syntax features with the new pub/priv system is tricky and needs to be tested thoroughly.
+- [ ] HUGE: Fix class/struct members to be defined in the source and declared in the header. This will require a LOT of work.

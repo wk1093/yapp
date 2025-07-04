@@ -176,8 +176,8 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
                     // Skip anonymous types in header
                     continue;
                 }
-                // check if we already have extern
-                if (!d.isExtern) {
+                // Do not emit extern for constexpr variables
+                if (!d.isConstexpr && !d.isExtern) {
                     // Remove initializer for extern declaration
                     std::string code = d.code;
                     size_t eq = code.find('=');
@@ -188,7 +188,6 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
                     if (!code.empty() && code.back() == ';') code.pop_back();
                     copy.code = "extern " + code;
                 }
-                
             }
             pubDecls.push_back(copy);
         }

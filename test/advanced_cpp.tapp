@@ -1,0 +1,145 @@
+@test check
+@c "constexpr int answer" in h
+@c "constexpr int answer" not in c
+
+// C++20 constexpr variable
+constexpr int answer = 42;
+
+@test check
+@c "template < typename T , typename U >" in h
+@c "template < typename T , typename U >" not in c
+
+// Template with multiple parameters
+namespace math {
+    template<typename T, typename U>
+    pub auto add(T a, U b) -> decltype(a + b) {
+        return a + b;
+    }
+}
+
+@test check
+@c "struct alignas ( 16 ) Aligned" in h
+@c "struct alignas ( 16 ) Aligned" not in c
+
+// Aligned struct
+struct alignas(16) Aligned {
+    float data[4];
+};
+
+@test check
+@c "namespace outer" in h and "namespace inner" in h
+@c "namespace inner" not in c
+
+// Nested namespaces
+namespace outer {
+    namespace inner {
+        pub void deep();
+    }
+}
+
+@test check
+@c "friend class" in h
+@c "friend class" not in c
+
+// Friend class
+class A {
+    friend class B;
+    int x;
+};
+
+@test check
+@c "enum class Color" in h
+@c "enum class Color" not in c
+
+// Enum class
+pub enum class Color { Red, Green, Blue };
+
+@test check
+@c "using IntPtr" in h
+@c "using IntPtr" not in c
+
+// Type alias
+typedef int* IntPtr;
+using IntPtr2 = int*;
+
+@test check
+@c "static_assert" in h
+
+// Static assert
+static_assert(sizeof(int) == 4, "int must be 4 bytes");
+
+@test check
+@c "decltype ( auto ) getVal" in h
+@c "decltype ( auto ) getVal" not in c
+
+#import <utility>
+
+// decltype(auto) return
+template<typename T>
+pub decltype(auto) getVal(T&& v) { return std::forward<T>(v); }
+
+@test check
+@c "operator +" in h
+@c "operator +" not in c
+
+// Operator overload
+pub struct Vec2 {
+    float x, y;
+    Vec2 operator+(const Vec2& other) const { return {x + other.x, y + other.y}; }
+};
+
+@test check
+@c "template < >" in h
+
+#import <iostream>
+
+template<typename T>
+pub void print(const T& v) { std::cout << "Generic print: " << v << std::endl; }
+// Template specialization
+template<>
+pub void print<int>(const int& v) { std::cout << "Specialized int print: " << v << std::endl; }
+
+@test check
+@c "constexpr int factorial" in h
+@c "constexpr int factorial" not in c
+
+// Recursive constexpr function
+constexpr int factorial(int n) { return n <= 1 ? 1 : n * factorial(n - 1); }
+
+@test check
+@c "union Data" in h
+@c "union Data" not in c
+
+// Union
+union Data {
+    int i;
+    float f;
+    char c;
+};
+
+@test check
+@c "mutable int counter" in h
+@c "mutable int counter" not in c
+
+// Mutable member
+class Counter {
+    mutable int counter;
+public:
+    void inc() const { ++counter; }
+};
+
+@test check
+@c "volatile int flag" in h
+@c "volatile int flag" not in c
+
+// Volatile member
+struct Flag {
+    volatile int flag;
+};
+
+@test check
+@c "noexcept" in h
+@c "noexcept" not in c
+
+// noexcept function
+pub void safe() noexcept;
