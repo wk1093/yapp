@@ -8,4 +8,4 @@
 - [ ] Add more unit tests
 - [x] Custom inclusion system for including another yapp file instead of using #include "myfile.yapp.h"
 - [ ] maybe? Build system that will automatically build dependencies of the main yapp file
-- [ ] BIG: Fix "using" to be default private and work properly.
+- [x] BIG: Fix "using" to be default private and work properly.
