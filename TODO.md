@@ -11,3 +11,4 @@
 - [x] BIG: Fix "using" to be default private and work properly.
 - [ ] HUGE: Ensure ALL C++ language features work correctly. combining advanced C++ syntax features with the new pub/priv system is tricky and needs to be tested thoroughly.
 - [ ] HUGE: Fix class/struct members to be defined in the source and declared in the header. This will require a LOT of work.
+- [ ] Fix default parameters. Should only show up in the header, not the source (if it is split into header/source).

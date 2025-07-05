@@ -1,0 +1,3 @@
+#import <string>
+
+#pub define str std::string

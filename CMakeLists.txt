@@ -39,9 +39,14 @@ add_custom_target(yapp_stdlib
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stdlib
     # compile the standard library yapp sources into c++
     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/io.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/_result.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/str.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
     
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.yapp.cpp -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o -Wl,-soname,libyapp.so -Wl,--no-undefined
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
+    COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o
+     ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.o -Wl,-soname,libyapp.so -Wl,--no-undefined
 )
 
 set(YAPP_COMPILER_FLAGS "-I${CMAKE_CURRENT_BINARY_DIR}/stdlib")

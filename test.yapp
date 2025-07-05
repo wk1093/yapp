@@ -3,6 +3,7 @@
 pub int main() {
     io::println("Hello, World!");
 
+    io::fileWrite("test_output.txt", "This is a test file written by YAPP.");
     return 0;
 }
 

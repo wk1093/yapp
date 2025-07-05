@@ -1,0 +1,10 @@
+namespace yapp {
+    pub enum Result {
+        Ok,
+        NotFound,
+        PermissionDenied,
+        InvalidInput,
+        Timeout,
+        UnknownError
+    }
+}

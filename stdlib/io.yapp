@@ -1,17 +1,83 @@
 #import <iostream>
+#import <fstream>
+#import str
+#import _result
 
 namespace io {
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
     template<typename... Args>
-    void print(Args... args) {
-        // Using fold expression to handle multiple arguments
+    pub void print(Args... args) {
         (void)std::initializer_list<int>{(std::cout << args, 0)...};
     }
 
     template<typename... Args>
-    void println(Args... args) {
-        // Using fold expression to handle multiple arguments
+    pub void println(Args... args) {
         (void)std::initializer_list<int>{(std::cout << args, 0)...};
-        std::cout << std::endl; // Add a newline at the end
+        std::cout << std::endl;
+    }
+
+    template<typename... Args>
+    pub void printError(Args... args) {
+        (void)std::initializer_list<int>{(std::cerr << args, 0)...};
+    }
+
+    template<typename... Args>
+    pub void printlnError(Args... args) {
+        (void)std::initializer_list<int>{(std::cerr << args, 0)...};
+        std::cerr << std::endl;
+    }
+
+    template<typename T>
+    pub T read() {
+        T value;
+        std::cin >> value;
+        return value;
+    }
+
+    template<typename T>
+    pub T readLine() {
+        T value;
+        std::getline(std::cin, value);
+        return value;
+    }
+
+    pub void flush() {
+        std::cout.flush();
+    }
+
+    pub yapp::Result fileRead(const str& filename, str& content) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            return yapp::Result::NotFound;
+        }
+        content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
+        return yapp::Result::Ok;
+    }
+
+    pub str fileRead(const str& filename, yapp::Result& result) {
+        str content;
+        result = fileRead(filename, content);
+        return content;
+    }
+
+    pub yapp::Result fileWrite(const str& filename, const str& content) {
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            return yapp::Result::NotFound;
+        }
+        file << content;
+        file.close();
+        return yapp::Result::Ok;
+    }
+
+    pub yapp::Result fileAppend(const str& filename, const str& content) {
+        std::ofstream file(filename, std::ios::app);
+        if (!file.is_open()) {
+            return yapp::Result::NotFound;
+        }
+        file << content;
+        file.close();
+        return yapp::Result::Ok;
     }
 }
