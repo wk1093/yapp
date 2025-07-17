@@ -1,6 +1,6 @@
 @test link
 
-#import io
+#import std.io
 
 pub int main() {
     io::println("Hello, World!");

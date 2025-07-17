@@ -1,0 +1,143 @@
+#import <memory>
+#import std.str
+
+pub struct base_result {
+    virtual ~base_result() = default;
+    virtual bool isOk() const = 0;
+    virtual bool isErr() const = 0;
+};
+
+template<typename T = void>
+pub struct ok_result : public base_result {
+    T value;
+    ok_result(const T& v) : value(v) {}
+    bool isOk() const override { return true; }
+    bool isErr() const override { return false; }
+};
+
+template<>
+struct ok_result<void> : base_result {
+    ok_result() {}
+    bool isOk() const override { return true; }
+    bool isErr() const override { return false; }
+};
+
+pub struct err_result : public base_result {
+    str error;
+    err_result(const str& err) : error(err) {}
+    bool isOk() const override { return false; }
+    bool isErr() const override { return true; }
+}
+
+template<typename T = void>
+pub struct Result {
+    std::unique_ptr<ok_result<T>> ok_ptr = nullptr;
+    std::unique_ptr<err_result> err_ptr = nullptr;
+
+    Result() = default;
+
+    template<typename U>
+    static Result<U> ok(const U& value) {
+        Result<U> res;
+        res.ok_ptr = std::make_unique<ok_result<U>>(value);
+        return res;
+    }
+
+    static Result<void> ok() {
+        Result<void> res;
+        res.ok_ptr = std::make_unique<ok_result<void>>();
+        return res;
+    }
+
+    static Result<void> err(const str& error) {
+        Result<void> res;
+        res.err_ptr = std::make_unique<err_result>(error);
+        return res;
+    }
+
+    bool isOk() const { return ok_ptr != nullptr; }
+    bool isErr() const { return err_ptr != nullptr; }
+
+    T unwrap() const {
+        if (!isOk()) throw std::runtime_error("Tried to unwrap error result");
+        return ok_ptr->value;
+    }
+
+    str unwrapErr() const {
+        if (!isErr()) throw std::runtime_error("Tried to unwrap error from Ok");
+        return err_ptr->error;
+    }
+    
+    // allow implicit conversion to T if ok
+    operator T() const {
+        return unwrap();
+    }
+
+    template<typename U>
+    operator Result<U>() const {
+        if (!isErr()) throw std::runtime_error("Attempted to convert normal result to error result");
+        return Result<U>::err(err_ptr->error);
+    }
+
+    operator bool() const {
+        return isOk();
+    }
+
+    template<typename U>
+    operator U() const {
+        if (!isOk()) throw std::runtime_error("Attempted to convert error result to value");
+        return ok_ptr->value;
+    }
+
+}
+
+template<>
+pub struct Result<void> {
+    std::unique_ptr<ok_result<void>> ok_ptr = nullptr;
+    std::unique_ptr<err_result> err_ptr = nullptr;
+
+    Result() = default;
+
+    static Result<void> ok() {
+        Result<void> res;
+        res.ok_ptr = std::make_unique<ok_result<void>>();
+        return res;
+    }
+
+    template<typename U>
+    static Result<U> ok(const U& value) {
+        Result<U> res;
+        res.ok_ptr = std::make_unique<ok_result<U>>(value);
+        return res;
+    }
+    
+    static Result<void> err(const str& error) {
+        Result<void> res;
+        res.err_ptr = std::make_unique<err_result>(error);
+        return res;
+    }
+
+    bool isOk() const { return ok_ptr != nullptr; }
+    bool isErr() const { return err_ptr != nullptr; }
+
+    void unwrap() const {
+        if (!isOk()) throw std::runtime_error("Tried to unwrap error result");
+    }
+
+    str unwrapErr() const {
+        if (!isErr()) throw std::runtime_error("Tried to unwrap error from Ok");
+        return err_ptr->error;
+    }
+
+    template<typename U>
+    operator Result<U>() const {
+        if (!isErr()) throw std::runtime_error("Attempted to convert normal result to error result");
+        return Result<U>::err(err_ptr->error);
+    }
+
+    operator bool() const {
+        return isOk();
+    }
+}
+
+#pub define result Result<>

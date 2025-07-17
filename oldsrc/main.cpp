@@ -45,13 +45,7 @@ std::string prePreprocess(const std::string& inputFile, const std::string& outpu
             } else if (doubleQuotes) {
                 importedFile = "\"" + importedFile + "\"";
             } else {
-                if (importedFile.find('.') == std::string::npos) {
-                    // If there is no extension, we assume it's a .yapp file and convert to .yapp.h
-                    importedFile = "<" + importedFile + ".yapp.h>";
-
-                } else {
-                    importedFile = "\"" + importedFile + "\"";
-                }
+                importedFile = "\"" + importedFile + ".yapp.h\"";
             }
             
             preprocStored.push_back("include " + importedFile);

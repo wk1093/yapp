@@ -14,18 +14,12 @@
 
 @test check
 @nocompile nowarn
-@c "\"stdio.h\"" in h
-
-#import stdio.h
-
-@test check
-@nocompile nowarn
-@c "<mylib.yapp.h>" in h
+@c "\"mylib.yapp.h\"" in h
 
 #import mylib
 
 @test check
 @nocompile nowarn
-@c "\"mylib.yapp.h\"" in h
+@c "\"std.mylib.yapp.h\"" in h
 
-#import mylib.yapp
+#import std.mylib

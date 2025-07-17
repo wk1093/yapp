@@ -1,6 +1,8 @@
 @test check
 @c "YES" in c
 @c "NO" not in c
+@c "yaplusplus_check" in h
+@c "yaplusplus_check" in c
 
 #ifdef __yaplusplus
 

@@ -1,9 +1,13 @@
 #import <iostream>
 #import <fstream>
-#import str
-#import _result
+#import std.str
+#import std.result
 
 namespace io {
+    using FileReader = std::ifstream;
+    using FileWriter = std::ofstream;
+    using FileStream = std::fstream;
+
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
     template<typename... Args>
     pub void print(Args... args) {
@@ -45,39 +49,52 @@ namespace io {
         std::cout.flush();
     }
 
-    pub yapp::Result fileRead(const str& filename, str& content) {
+    pub Result<str> fileReadText(const str& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
-            return yapp::Result::NotFound;
+            return result::err("Not Found: " + filename);
         }
-        content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        file.close();
-        return yapp::Result::Ok;
-    }
-
-    pub str fileRead(const str& filename, yapp::Result& result) {
         str content;
-        result = fileRead(filename, content);
-        return content;
+        str line;
+        while (std::getline(file, line)) {
+            content += line + "\n";
+        }
+        file.close();
+        return result::ok(content);       
     }
 
-    pub yapp::Result fileWrite(const str& filename, const str& content) {
+    pub Result<bytestr> fileReadBin(const str& filename) {
+        std::ifstream file(filename, std::ios::binary);
+        if (!file.is_open()) {
+            return result::err("Not Found: " + filename);
+        }
+        bytestr content;
+        file.seekg(0, std::ios::end);
+        size_t size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        content.resize(size);
+        file.read(&content[0], size);
+        file.close();
+        return result::ok(content);
+    }
+
+    pub Result<void> fileWrite(const str& filename, const str& content) { // Result<void> == Result<> == result
         std::ofstream file(filename);
         if (!file.is_open()) {
-            return yapp::Result::NotFound;
+            return result::err("Not Found: " + filename);
         }
         file << content;
         file.close();
-        return yapp::Result::Ok;
+        return result::ok();
     }
 
-    pub yapp::Result fileAppend(const str& filename, const str& content) {
+    pub Result<void> fileAppend(const str& filename, const str& content) {
         std::ofstream file(filename, std::ios::app);
         if (!file.is_open()) {
-            return yapp::Result::NotFound;
+            return result::err("Not Found: " + filename);
         }
         file << content;
         file.close();
-        return yapp::Result::Ok;
+        return result::ok();
     }
 }

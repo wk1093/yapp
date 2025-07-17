@@ -1,0 +1,69 @@
+#import <string>
+#import <sstream>
+#import <vector>
+#import <cstdarg>
+
+pub class str : public std::string {
+public:
+    using StringReader = std::istringstream;
+    using StringWriter = std::ostringstream;
+    using StringStream = std::stringstream;
+
+    static const size_t NotFound = std::string::npos;
+    // Constructors
+    str() : std::string() {}
+    str(const std::string& s) : std::string(s) {}
+    str(const char* s) : std::string(s) {}
+    str(const char* s, size_t length) : std::string(s, length) {}
+    str(const str& other) : std::string(other) {}
+    str(str&& other) noexcept : std::string(std::move(other)) {}
+
+    pub bool endsWith(const str& suffix) const {
+        if (suffix.length() > this->length()) return false;
+        return this->std::string::rfind(suffix) == this->length() - suffix.length();
+    }
+    pub str toUpper() const {
+        str result = *this;
+        for (char& c : result) {
+            c = std::toupper(c);
+        }
+        return result;
+    }
+    pub str toLower() const {
+        str result = *this;
+        for (char& c : result) {
+            c = std::tolower(c);
+        }
+        return result;
+    }
+    pub str trim() const {
+        size_t start = this->find_first_not_of(" \t\n\r\f\v");
+        size_t end = this->find_last_not_of(" \t\n\r\f\v");
+        if (start == std::string::npos || end == std::string::npos) return str();
+        return this->substr(start, end - start + 1);
+    }
+
+    pub static str format(const char* fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+        va_list args_copy;
+        va_copy(args_copy, args);
+        size_t size = vsnprintf(nullptr, 0, fmt, args_copy) + 1;
+        va_end(args_copy);
+
+        std::vector<char> buffer(size);
+        vsnprintf(buffer.data(), size, fmt, args);
+        va_end(args);
+        return str(buffer.data());
+    }
+
+    template<typename T>
+    pub static str toString(const T& value) {
+        StringWriter ss;
+        ss << value;
+        return str(ss.str());
+    }
+}
+
+// strings can handle binary data, this is just for clarity
+using bytestr = str;
