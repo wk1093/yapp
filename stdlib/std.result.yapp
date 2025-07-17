@@ -141,3 +141,6 @@ pub struct Result<void> {
 }
 
 #pub define result Result<>
+
+// TODO: Fix using so this works
+// pub using pub result = Result<>;

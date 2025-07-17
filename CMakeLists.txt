@@ -32,55 +32,6 @@ target_link_libraries(yappc PRIVATE Threads::Threads)
 
 set(YAPP_OLD_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/yappc")
 
-# add_custom_target(yapp_stdlib
-#     DEPENDS yappc
-#     COMMENT "Compiling YAPP standard library"
-    
-#     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stdlib
-#     # compile the standard library yapp sources into c++
-#     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/io.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
-#     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/_result.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
-#     COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/str.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib
-    
-#     COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
-#     COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
-#     COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.yapp.cpp -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC
-#     COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${CMAKE_CURRENT_BINARY_DIR}/stdlib/io.o
-#      ${CMAKE_CURRENT_BINARY_DIR}/stdlib/str.o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/_result.o -Wl,-soname,libyapp.so -Wl,--no-undefined
-# )
-
-set(YAPP_STD_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.io.yapp
-    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.result.yapp
-    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.str.yapp
-)
-
-# auto generate the commands to compile the standard library
-set(YAPP_STD_PREPROC_COMMANDS "")
-set(YAPP_STD_COMPILE_COMMANDS "")
-set(YAPP_STD_OBJECTS "")
-foreach(source ${YAPP_STD_SOURCES})
-    get_filename_component(source_name ${source} NAME)
-    set(output_file "${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.cpp")
-    get_filename_component(output_file_dir ${output_file} DIRECTORY)
-    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_OLD_COMPILER} ${source} -o ${output_file_dir})
-    list(APPEND YAPP_STD_COMPILE_COMMANDS COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o ${output_file} -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC)
-    list(APPEND YAPP_STD_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o)
-endforeach()
-
-add_custom_target(yapp_stdlib
-    DEPENDS yappc
-    COMMENT "Compiling YAPP standard library"
-    
-    # make dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stdlib
-    # compile the standard library yapp sources into c++
-    ${YAPP_STD_PREPROC_COMMANDS}
-    # compile the generated c++ files
-    ${YAPP_STD_COMPILE_COMMANDS}
-    # link the generated c++ files into a shared library
-    COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${YAPP_STD_OBJECTS} -Wl,-soname,libyapp.so -Wl,--no-undefined -fPIC
-)
 
 set(YAPP_COMPILER_FLAGS "-I${CMAKE_CURRENT_BINARY_DIR}/stdlib")
 set(YAPP_LINK_FLAGS "-L${CMAKE_CURRENT_BINARY_DIR}/stdlib -lyapp")
@@ -102,6 +53,41 @@ add_custom_target(yappc_compile
     COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/main.yapp.cpp -lclang -Wno-attributes
     # link the generated c++ files into a new yapp compiler
     COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/custom/yappc ${YAPP_LINK_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o -lclang
+)
+
+set(YAPP_NEW_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/custom/yappc")
+
+set(YAPP_STD_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.io.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.result.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.str.yapp
+)
+
+# auto generate the commands to compile the standard library
+set(YAPP_STD_PREPROC_COMMANDS "")
+set(YAPP_STD_COMPILE_COMMANDS "")
+set(YAPP_STD_OBJECTS "")
+foreach(source ${YAPP_STD_SOURCES})
+    get_filename_component(source_name ${source} NAME)
+    set(output_file "${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.cpp")
+    get_filename_component(output_file_dir ${output_file} DIRECTORY)
+    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_NEW_COMPILER} ${source} -o ${output_file_dir})
+    list(APPEND YAPP_STD_COMPILE_COMMANDS COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o ${output_file} -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC)
+    list(APPEND YAPP_STD_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o)
+endforeach()
+
+add_custom_target(yapp_stdlib
+    DEPENDS yappc_compile
+    COMMENT "Compiling YAPP standard library"
+    
+    # make dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    # compile the standard library yapp sources into c++
+    ${YAPP_STD_PREPROC_COMMANDS}
+    # compile the generated c++ files
+    ${YAPP_STD_COMPILE_COMMANDS}
+    # link the generated c++ files into a shared library
+    COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${YAPP_STD_OBJECTS} -Wl,-soname,libyapp.so -Wl,--no-undefined -fPIC
 )
 
 add_custom_target(yappc_test

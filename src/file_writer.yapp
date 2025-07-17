@@ -152,15 +152,15 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
             pubDecls.push_back(copy);
             continue;
         }
-        if (d.isStatic) continue; // skip static decls in header
+        if (d.isStatic && !d.isUsingDec) continue; // skip static decls in header
         if (d.annotation == "pub") {
             if (isAnonymousStruct(d)) {
                 continue;
             }
-            if ((d.kind == CXCursor_StructDecl ||
+            if (((d.kind == CXCursor_StructDecl ||
                 d.kind == CXCursor_UnionDecl ||
                 d.kind == CXCursor_EnumDecl) &&
-                typedefBackedTags.count(d.usr))
+                typedefBackedTags.count(d.usr)) && !d.isUsingDec)
             {
                 continue;
             }
@@ -171,7 +171,7 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
                 copy.code = makeDeclaration(d.code);
             }
             // For globals variables, emit as extern in header (but not for anonymous types)
-            if (isGlobalVariable(d)) {
+            if (isGlobalVariable(d) && !d.isUsingDec) {
                 if (isAnonymousType(d)) {
                     // Skip anonymous types in header
                     continue;

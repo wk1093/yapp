@@ -134,6 +134,32 @@ def run_test(test, test_dir):
                 log_file.write(str(e))
                 print_test_result(test[0], test[2], test_index, "compile", "FAILED: Compilation error", test_dir)
                 any_failed = True
+    elif "run" in test_code[0]:
+        # same as link but we run it and ensure it runs without errors (i.e. exit code 0)
+        with open(os.path.join(test_dir, "run.log"), 'w') as log_file:
+            log_file.write(f"Starting compilation and execution...\nTest source: {test[0]} line {test[2]}\n")
+            try:
+                args1 = [yappc_path, os.path.join(test_dir, "test.yapp"), "-c"]
+                if debug:
+                    args1.append("-g")
+                else:
+                    args1.append("-s")
+                args = args1 + ["--", "--", "-o", os.path.join(test_dir, "test.elf"), "-I", "./build/stdlib/", "-L", "./build/stdlib/", "-lyapp"]
+                log_file.write(f"Running command: {' '.join(args)}\n")
+                subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                log_file.write("Compilation successful.\n")
+                
+                # Now run the compiled program
+                run_args = [os.path.join(test_dir, "test.elf")]
+                log_file.write(f"Running program: {' '.join(run_args)}\n")
+                subprocess.run(run_args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
+                log_file.write("Program executed successfully.\n")
+                print_test_result(test[0], test[2], test_index, "run", "OK", test_dir)
+            except subprocess.CalledProcessError as e:
+                log_file.write("An error occurred during compilation or execution.\n")
+                log_file.write(str(e))
+                print_test_result(test[0], test[2], test_index, "run", "FAILED: Compilation or execution error", test_dir)
+                any_failed = True
     elif "check" in test_code[0]:
         nocompile = any(line.lstrip().startswith("@nocompile") for line in test_code)
         nocompile_nowarn = any(line.lstrip().startswith("@nocompile nowarn") for line in test_code)

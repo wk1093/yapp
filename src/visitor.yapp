@@ -106,14 +106,16 @@ priv bool hasConstKeyword(CXCursor cursor) {
 
 priv bool isUsingDec(CXCursor cursor) {
     CXCursorKind kind = clang_getCursorKind(cursor);
-    return (kind == CXCursor_UsingDeclaration || kind == CXCursor_UsingDirective);
+    return (kind == CXCursor_UsingDeclaration || kind == CXCursor_UsingDirective || kind == CXCursor_TypeAliasDecl);
 }
 
 pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
-    if (!clang_isDeclaration(kind)) return CXChildVisit_Recurse;
-    if (kind == CXCursor_LinkageSpec || kind == CXCursor_Namespace) {
-        return CXChildVisit_Recurse;
+    if (!isUsingDec(cursor)) {
+        if (!clang_isDeclaration(kind)) return CXChildVisit_Recurse;
+        if (kind == CXCursor_LinkageSpec || kind == CXCursor_Namespace) {
+            return CXChildVisit_Recurse;
+        }
     }
     std::string annotation = getAnnotate(cursor);
     if (isUsingDec(cursor) && annotation.empty()) {

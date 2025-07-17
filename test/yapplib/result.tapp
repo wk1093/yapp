@@ -1,1 +1,79 @@
-// TODO
+@test run
+#import std.result
+#import std.io
+
+priv Result<str> testResult(bool shouldFail) {
+    if (shouldFail) {
+        return result::err("This is an error message");
+    } else {
+        return result::ok<str>("This is a success message");
+    }
+}
+
+priv Result<int> testResult2(bool shouldFail) {
+    if (shouldFail) {
+        return result::err("This is an error message");
+    } else {
+        return result::ok(123);
+    }
+}
+
+priv Result<> testResult3(bool shouldFail) {
+    if (shouldFail) {
+        return result::err("This is an error message");
+    } else {
+        return result::ok();
+    }
+}
+
+pub int main() {
+    auto res1t = testResult(true);
+    if (res1t.isErr()) {
+        io::println("Error: ", res1t.unwrapErr());
+    } else {
+        io::println("Success: ", res1t.unwrap());
+        return 1;
+    }
+
+    auto res1f = testResult(false);
+    if (res1f.isErr()) {
+        io::println("Error: ", res1f.unwrapErr());
+        return 1;
+    } else {
+        io::println("Success: ", res1f.unwrap());
+    }
+
+    auto res2t = testResult2(true);
+    if (res2t.isErr()) {
+        io::println("Error: ", res2t.unwrapErr());
+    } else {
+        io::println("Success: ", res2t.unwrap());
+        return 1;
+    }
+
+    auto res2f = testResult2(false);
+    if (res2f.isErr()) {
+        io::println("Error: ", res2f.unwrapErr());
+        return 1;
+    } else {
+        io::println("Success: ", res2f.unwrap());
+    }
+
+    auto res3t = testResult3(true);
+    if (res3t.isErr()) {
+        io::println("Error: ", res3t.unwrapErr());
+    } else {
+        io::println("Success: No content");
+        return 1;
+    }
+
+    auto res3f = testResult3(false);
+    if (res3f.isErr()) {
+        io::println("Error: ", res3f.unwrapErr());
+        return 1;
+    } else {
+        io::println("Success: No content");
+    }
+
+    return 0;
+}
