@@ -4,15 +4,15 @@
 
 priv Result<str> testResult(bool shouldFail) {
     if (shouldFail) {
-        return result::err("This is an error message");
+        return result::err("Error message 0");
     } else {
-        return result::ok<str>("This is a success message");
+        return result::ok<str>("Success message 0");
     }
 }
 
 priv Result<int> testResult2(bool shouldFail) {
     if (shouldFail) {
-        return result::err("This is an error message");
+        return result::err("Error message 1");
     } else {
         return result::ok(123);
     }
@@ -20,7 +20,7 @@ priv Result<int> testResult2(bool shouldFail) {
 
 priv Result<> testResult3(bool shouldFail) {
     if (shouldFail) {
-        return result::err("This is an error message");
+        return result::err("Error message 2");
     } else {
         return result::ok();
     }
@@ -30,6 +30,10 @@ pub int main() {
     auto res1t = testResult(true);
     if (res1t.isErr()) {
         io::println("Error: ", res1t.unwrapErr());
+        if (res1t.unwrapErr() != "Error message 0") {
+            io::println("Unexpected error message");
+            return 1;
+        }
     } else {
         io::println("Success: ", res1t.unwrap());
         return 1;
@@ -41,11 +45,19 @@ pub int main() {
         return 1;
     } else {
         io::println("Success: ", res1f.unwrap());
+        if (res1f.unwrap() != "Success message 0") {
+            io::println("Unexpected success message");
+            return 1;
+        }
     }
 
     auto res2t = testResult2(true);
     if (res2t.isErr()) {
         io::println("Error: ", res2t.unwrapErr());
+        if (res2t.unwrapErr() != "Error message 1") {
+            io::println("Unexpected error message");
+            return 1;
+        }
     } else {
         io::println("Success: ", res2t.unwrap());
         return 1;
@@ -57,11 +69,19 @@ pub int main() {
         return 1;
     } else {
         io::println("Success: ", res2f.unwrap());
+        if (res2f.unwrap() != 123) {
+            io::println("Unexpected success value");
+            return 1;
+        }
     }
 
     auto res3t = testResult3(true);
     if (res3t.isErr()) {
         io::println("Error: ", res3t.unwrapErr());
+        if (res3t.unwrapErr() != "Error message 2") {
+            io::println("Unexpected error message");
+            return 1;
+        }
     } else {
         io::println("Success: No content");
         return 1;
@@ -73,6 +93,10 @@ pub int main() {
         return 1;
     } else {
         io::println("Success: No content");
+        if (!res3f.isOk()) {
+            io::println("Expected success, but got error");
+            return 1;
+        }
     }
 
     return 0;
