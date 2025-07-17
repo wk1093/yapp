@@ -111,6 +111,9 @@ priv bool isUsingDec(CXCursor cursor) {
 
 pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
     CXCursorKind kind = clang_getCursorKind(cursor);
+    DeclInfo info;
+    info.name = toStdString(clang_getCursorSpelling(cursor));
+    info.usr = toStdString(clang_getCursorUSR(cursor));
     if (!isUsingDec(cursor)) {
         if (!clang_isDeclaration(kind)) return CXChildVisit_Recurse;
         if (kind == CXCursor_LinkageSpec || kind == CXCursor_Namespace) {
@@ -131,9 +134,6 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
             annotation = "pub";
         }
     }
-    DeclInfo info;
-    info.name = toStdString(clang_getCursorSpelling(cursor));
-    info.usr = toStdString(clang_getCursorUSR(cursor));
     info.annotation = annotation;
     info.isDefinition = clang_isCursorDefinition(cursor);
     info.isInline = clang_Cursor_isFunctionInlined(cursor);
@@ -147,6 +147,7 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
     // --- TEMPLATE DETECTION ---
     info.isTemplate = false;
     info.typeUsr = "";
+    info.isUsingDec = isUsingDec(cursor);
     auto ct = clang_getCursorType(cursor);
     auto typeDecl = clang_getTypeDeclaration(ct);
     if (!clang_Cursor_isNull(typeDecl)) {
@@ -241,5 +242,6 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
         info.annotation = "pub";
     }
     decls.push_back(info);
+
     return CXChildVisit_Continue;
 }

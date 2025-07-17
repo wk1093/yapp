@@ -78,7 +78,7 @@ namespace io {
         return result::ok(content);
     }
 
-    pub Result<void> fileWrite(const str& filename, const str& content) { // Result<void> == Result<> == result
+    pub Result<void> fileWrite(const str& filename, const str& content) {
         std::ofstream file(filename);
         if (!file.is_open()) {
             return result::err("Not Found: " + filename);

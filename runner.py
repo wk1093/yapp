@@ -144,7 +144,8 @@ def run_test(test, test_dir):
                     args1.append("-g")
                 else:
                     args1.append("-s")
-                args = args1 + ["--", "--", "-o", os.path.join(test_dir, "test.elf"), "-I", "./build/stdlib/", "-L", "./build/stdlib/", "-lyapp"]
+                # we also need some extra arguments to make it so it looks for libraries in the right place 
+                args = args1 + ["--", "--", "-o", os.path.join(test_dir, "test.elf"), "-I", "./build/stdlib/", "-L", "./build/stdlib/", "-lyapp", "-Wl,-rpath=./build/stdlib/"]
                 log_file.write(f"Running command: {' '.join(args)}\n")
                 subprocess.run(args, check=True, stdout=log_file, stderr=subprocess.STDOUT)
                 log_file.write("Compilation successful.\n")
