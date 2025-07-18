@@ -22,7 +22,7 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
 
     out << "// YA++\n";
     if (stdlib) {
-        preprocStored.push_back("include \"std.main.yapp.h\"");
+        preprocStored.push_back("include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n");
         out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();\n";
     }
 

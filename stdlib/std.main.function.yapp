@@ -1,14 +1,19 @@
 // we want main to convert to our custom main
-#import <stdio.h>
+#import std.str
+#import std.vec
+#import <cstdio>
 
-
-int __argc_global = 0;
-char** __argv_global = nullptr;
-
-pub int __user_main() __attribute__((weak));
+pub int __user_main(vec<str>) __attribute__((weak));
 
 pub int main(int argc, char** argv) {
-    __argc_global = argc;
-    __argv_global = argv;
-    return __user_main();
+    vec<str> args;
+    for (int i = 0; i < argc; ++i) {
+        args.push_back(str(argv[i]));
+    }
+    if (__user_main) {
+        return __user_main(args);
+    } else {
+        printf("No user main defined.\n");
+        return 1; // Return an error code if no user main is defined
+    }
 }

@@ -1,7 +1,6 @@
 #import std.io
-#import std.str
 
-priv int main() {
+priv int main(vec<str> args) {
     io::println("This is a test.");
 
     return 0;

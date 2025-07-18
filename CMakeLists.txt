@@ -63,6 +63,7 @@ set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.str.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.main.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.main.function.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.vec.yapp
 )
 
 # auto generate the commands to compile the standard library

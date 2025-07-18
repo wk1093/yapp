@@ -1,6 +1,6 @@
 @test compile
 
-#include <cstdio>
+#import <cstdio>
 
 pub int main() {
     printf("Hello, World!\n");
@@ -9,8 +9,8 @@ pub int main() {
 
 @test compile
 
-#include <cstdio>
-#include <cstdlib>
+#import <cstdio>
+#import <cstdlib>
 
 namespace testing {
     priv void test() {
@@ -69,7 +69,7 @@ void testfunction();
 @c "Value: %d\\n" in h
 @c "Value: %d\\n" not in c
 
-#include <cstdio>
+#import <cstdio>
 
 namespace testing {
     template<typename T>

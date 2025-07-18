@@ -49,10 +49,10 @@ namespace io {
         std::cout.flush();
     }
 
-    pub Result<str> fileReadText(const str& filename) {
+    pub result<str> fileReadText(const str& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
-            return result::err("Not Found: " + filename);
+            return res::err("Not Found: " + filename);
         }
         str content;
         str line;
@@ -60,13 +60,13 @@ namespace io {
             content += line + "\n";
         }
         file.close();
-        return result::ok(content);       
+        return res::ok(content);       
     }
 
-    pub Result<bytestr> fileReadBin(const str& filename) {
+    pub result<bytestr> fileReadBin(const str& filename) {
         std::ifstream file(filename, std::ios::binary);
         if (!file.is_open()) {
-            return result::err("Not Found: " + filename);
+            return res::err("Not Found: " + filename);
         }
         bytestr content;
         file.seekg(0, std::ios::end);
@@ -75,26 +75,26 @@ namespace io {
         content.resize(size);
         file.read(&content[0], size);
         file.close();
-        return result::ok(content);
+        return res::ok(content);
     }
 
-    pub Result<void> fileWrite(const str& filename, const str& content) {
+    pub result<void> fileWrite(const str& filename, const str& content) {
         std::ofstream file(filename);
         if (!file.is_open()) {
-            return result::err("Not Found: " + filename);
+            return res::err("Not Found: " + filename);
         }
         file << content;
         file.close();
-        return result::ok();
+        return res::ok();
     }
 
-    pub Result<void> fileAppend(const str& filename, const str& content) {
+    pub result<void> fileAppend(const str& filename, const str& content) {
         std::ofstream file(filename, std::ios::app);
         if (!file.is_open()) {
-            return result::err("Not Found: " + filename);
+            return res::err("Not Found: " + filename);
         }
         file << content;
         file.close();
-        return result::ok();
+        return res::ok();
     }
 }

@@ -1,0 +1,8 @@
+#import <vector>
+
+template<typename T>
+struct vec : public std::vector<T> {
+    using std::vector<T>::vector; // Inherit constructors
+    
+
+};

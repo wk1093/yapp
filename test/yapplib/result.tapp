@@ -2,31 +2,31 @@
 #import std.result
 #import std.io
 
-priv Result<str> testResult(bool shouldFail) {
+priv result<str> testResult(bool shouldFail) {
     if (shouldFail) {
-        return result::err("Error message 0");
+        return res::err("Error message 0");
     } else {
-        return result::ok<str>("Success message 0");
+        return res::ok<str>("Success message 0");
     }
 }
 
-priv Result<int> testResult2(bool shouldFail) {
+priv result<int> testResult2(bool shouldFail) {
     if (shouldFail) {
-        return result::err("Error message 1");
+        return res::err("Error message 1");
     } else {
-        return result::ok(123);
+        return res::ok(123);
     }
 }
 
-priv Result<> testResult3(bool shouldFail) {
+priv result<> testResult3(bool shouldFail) {
     if (shouldFail) {
-        return result::err("Error message 2");
+        return res::err("Error message 2");
     } else {
-        return result::ok();
+        return res::ok();
     }
 }
 
-pub int main() {
+pub int main(vec<str> args) {
     auto res1t = testResult(true);
     if (res1t.isErr()) {
         io::println("Error: ", res1t.unwrapErr());

@@ -30,11 +30,11 @@ struct pub err_result : public base_result {
 };
 
 template<typename T = void>
-struct pub Result {
+struct pub result {
     std::unique_ptr<ok_result<T>> ok_ptr = nullptr;
     std::unique_ptr<err_result> err_ptr = nullptr;
 
-    Result() = default;
+    result() = default;
 
     bool isOk() const { return ok_ptr != nullptr; }
     bool isErr() const { return err_ptr != nullptr; }
@@ -61,11 +61,11 @@ struct pub Result {
 };
 
 template<>
-struct pub Result<void> {
+struct pub result<void> {
     std::unique_ptr<ok_result<void>> ok_ptr = nullptr;
     std::unique_ptr<err_result> err_ptr = nullptr;
 
-    Result() = default;
+    result() = default;
 
     bool isOk() const { return ok_ptr != nullptr; }
     bool isErr() const { return err_ptr != nullptr; }
@@ -80,9 +80,9 @@ struct pub Result<void> {
     }
 
     template<typename U>
-    operator Result<U>() const {
+    operator result<U>() const {
         if (!isErr()) throw std::runtime_error("Attempted to convert normal result to error result");
-        Result<U> res;
+        result<U> res;
         res.err_ptr = std::make_unique<err_result>(err_ptr->error);
         return res;
     }
@@ -92,22 +92,22 @@ struct pub Result<void> {
     }
 };
 
-namespace result {
+namespace res {
     template<typename U>
-    pub Result<U> ok(const U& value) {
-        Result<U> res;
+    pub result<U> ok(const U& value) {
+        result<U> res;
         res.ok_ptr = std::make_unique<ok_result<U>>(value);
         return res;
     }
 
-    pub Result<void> ok() {
-        Result<void> res;
+    pub result<void> ok() {
+        result<void> res;
         res.ok_ptr = std::make_unique<ok_result<void>>();
         return res;
     }
 
-    pub Result<void> err(const str& error) {
-        Result<void> res;
+    pub result<void> err(const str& error) {
+        result<void> res;
         res.err_ptr = std::make_unique<err_result>(error);
         return res;
     }
