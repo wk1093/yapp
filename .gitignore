@@ -2,3 +2,5 @@
 build/
 *.elf
 test_output/
+a.out
+testdir/

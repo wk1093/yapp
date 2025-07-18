@@ -11,7 +11,7 @@
 
 pub std::vector<std::string> preprocStored;
 
-pub std::string prePreprocess(const std::string& inputFile, const std::string& outputDir) {
+pub std::string prePreprocess(const std::string& inputFile, const std::string& outputDir, bool stdlib) {
     std::ifstream in(inputFile);
     if (!in) {
         std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
@@ -19,6 +19,12 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
     }
     std::ostringstream out;
     std::string line;
+
+    out << "// YA++\n";
+    if (stdlib) {
+        preprocStored.push_back("include \"std.main.yapp.h\"");
+        out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();\n";
+    }
 
     std::regex pubPreproc(R"(^\s*#pub\s+(.*?)$)");
     std::regex importPreproc(R"(^\s*#import\s+(.*?)$)"); // #import X should act like #pub include X
@@ -173,6 +179,7 @@ pub int main(int argc, char** argv) {
     bool sourceToggle = false;
     bool removeHeader = false;
     bool compileGenerated = false;
+    bool useStdlib = true;
     std::string outputDir = ""; // Default to same directory as input file
     for (int i = 0; i < myArgs.size(); i++) {
         std::string arg = myArgs[i];
@@ -214,6 +221,10 @@ pub int main(int argc, char** argv) {
             // Handle compile generated files option
             compileGenerated = true;
         }
+        if (arg == "--no-std" || arg == "--no-stdlib") {
+            // Disable stdlib usage
+            useStdlib = false;
+        }
     }
 
     std::string base = argv[1];
@@ -226,7 +237,7 @@ pub int main(int argc, char** argv) {
     }
 
     // pre-preprocessor step
-    std::string step0File = prePreprocess(argv[1], outputDir);
+    std::string step0File = prePreprocess(argv[1], outputDir, useStdlib);
     std::string step1File = preprocessStep2(step0File, outputDir);
     // preprocessor step
     std::string preprocOutputFile = step1File;

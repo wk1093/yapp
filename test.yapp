@@ -1,13 +1,8 @@
 #import std.io
 #import std.str
 
-pub int main() {
-    str filePath = "testfile.txt";
-
-    io::fileWrite(filePath, "Hello, World!").unwrap();
-
-    str content = io::fileReadText(filePath).unwrap();
-    io::print("File content: ", content);
+priv int main() {
+    io::println("This is a test.");
 
     return 0;
 }

@@ -63,6 +63,21 @@ public:
         ss << value;
         return str(ss.str());
     }
+
+    template<typename T>
+    pub static str join(const std::vector<T>& items, const str& delimiter = ", ") {
+        if (items.empty()) return str();
+        StringWriter ss;
+        for (size_t i = 0; i < items.size(); ++i) {
+            ss << items[i];
+            if (i < items.size() - 1) {
+                ss << delimiter;
+            }
+        }
+        return str(ss.str());
+    }
+
+    
 }
 
 // strings can handle binary data, this is just for clarity

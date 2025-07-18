@@ -1,0 +1,14 @@
+// we want main to convert to our custom main
+#import <stdio.h>
+
+
+int __argc_global = 0;
+char** __argv_global = nullptr;
+
+pub int __user_main() __attribute__((weak));
+
+pub int main(int argc, char** argv) {
+    __argc_global = argc;
+    __argv_global = argv;
+    return __user_main();
+}

@@ -61,6 +61,8 @@ set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.io.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.result.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.str.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.main.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.main.function.yapp
 )
 
 # auto generate the commands to compile the standard library
@@ -71,7 +73,7 @@ foreach(source ${YAPP_STD_SOURCES})
     get_filename_component(source_name ${source} NAME)
     set(output_file "${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.cpp")
     get_filename_component(output_file_dir ${output_file} DIRECTORY)
-    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_NEW_COMPILER} ${source} -o ${output_file_dir})
+    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_NEW_COMPILER} ${source} -o ${output_file_dir} --no-std)
     list(APPEND YAPP_STD_COMPILE_COMMANDS COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o ${output_file} -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC)
     list(APPEND YAPP_STD_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o)
 endforeach()
