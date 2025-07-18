@@ -5,9 +5,9 @@
 
 class pub str : public std::string {
 public:
-    using StringReader = std::istringstream;
-    using StringWriter = std::ostringstream;
-    using StringStream = std::stringstream;
+    using reader = std::istringstream;
+    using writer = std::ostringstream;
+    using stream = std::stringstream;
 
     static const size_t NotFound = std::string::npos;
     // Constructors
@@ -59,7 +59,7 @@ public:
 
     template<typename T>
     pub static str toString(const T& value) {
-        StringWriter ss;
+        writer ss;
         ss << value;
         return str(ss.str());
     }
@@ -67,7 +67,7 @@ public:
     template<typename T>
     pub static str join(const std::vector<T>& items, const str& delimiter = ", ") {
         if (items.empty()) return str();
-        StringWriter ss;
+        writer ss;
         for (size_t i = 0; i < items.size(); ++i) {
             ss << items[i];
             if (i < items.size() - 1) {

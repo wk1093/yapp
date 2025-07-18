@@ -1,8 +1,174 @@
+#import std.str
+#import std.result
 #import <vector>
+#import <functional>
+#import <algorithm>
 
 template<typename T>
 struct vec : public std::vector<T> {
     using std::vector<T>::vector; // Inherit constructors
-    
 
+    vec(const std::vector<T>& other) : std::vector<T>(other) {}
+    vec(std::vector<T>&& other) noexcept : std::vector<T>(std::move(other)) {}
+    vec& operator=(const std::vector<T>& other) {
+        std::vector<T>::operator=(other);
+        return *this;
+    }
+    vec& operator=(std::vector<T>&& other) noexcept {
+        std::vector<T>::operator=(std::move(other));
+        return *this;
+    }
+
+    operator std::vector<T>&() {
+        return *static_cast<std::vector<T>*>(this);
+    }
+    
+    str join(const str& delimiter) const {
+        if (this->empty()) return str();
+        str::writer writer;
+        for (size_t i = 0; i < this->size(); ++i) {
+            writer << (*this)[i];
+            if (i < this->size() - 1) {
+                writer << delimiter;
+            }
+        }
+        return writer.str();
+    }
+
+    str join() const {
+        return join(", ");
+    }
+
+    str toString() const {
+        return str::join(*this, ", ");
+    }
+    str toString(const str& delimiter) const {
+        return str::join(*this, delimiter);
+    }
+
+    template<typename U>
+    vec<U> map(std::function<U(const T&)> func) const {
+        vec<U> result;
+        for (const auto& item : *this) {
+            result.push_back(func(item));
+        }
+        return result;
+    }
+
+    template<typename U>
+    U reduce(std::function<U(const U&, const T&)> func, U initial) const {
+        U result = initial;
+        for (const auto& item : *this) {
+            result = func(result, item);
+        }
+        return result;
+    }
+
+    vec<T> filter(std::function<bool(const T&)> predicate) const {
+        vec<T> result;
+        for (const auto& item : *this) {
+            if (predicate(item)) {
+                result.push_back(item);
+            }
+        }
+        return result;
+    }
+
+    bool contains(const T& value) const {
+        return std::find(this->begin(), this->end(), value) != this->end();
+    }
+
+    result<T> find(std::function<bool(const T&)> predicate, size_t start = 0) const {
+        if (start >= this->size()) {
+            return res::err("Start index out of bounds");
+        }
+        for (size_t i = start; i < this->size(); ++i) {
+            if (predicate((*this)[i])) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found");
+    }
+
+    result<T> find(const T& value, size_t start = 0) const {
+        if (start >= this->size()) {
+            return res::err("Start index out of bounds");
+        }
+        for (size_t i = start; i < this->size(); ++i) {
+            if ((*this)[i] == value) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found");
+    }
+
+    result<T> find(std::function<bool(const T&)> predicate, size_t start, size_t end) const {
+        if (start >= this->size() || end > this->size() || start >= end) {
+            return res::err("Invalid range");
+        }
+        for (size_t i = start; i < end; ++i) {
+            if (predicate((*this)[i])) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found in range");
+    }
+
+    result<T> find(const T& value, size_t start, size_t end) const {
+        if (start >= this->size() || end > this->size() || start >= end) {
+            return res::err("Invalid range");
+        }
+        for (size_t i = start; i < end; ++i) {
+            if ((*this)[i] == value) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found in range");
+    }
+
+    result<T> rfind(std::function<bool(const T&)> predicate) const {
+        for (auto it = this->rbegin(); it != this->rend(); ++it) {
+            if (predicate(*it)) {
+                return res::ok(*it);
+            }
+        }
+        return res::err("Item not found");
+    }
+
+    result<T> rfind(const T& value) const {
+        for (auto it = this->rbegin(); it != this->rend(); ++it) {
+            if (*it == value) {
+                return res::ok(*it);
+            }
+        }
+        return res::err("Item not found");
+    }
+
+    result<T> rfind(std::function<bool(const T&)> predicate, size_t start, size_t end) const {
+        if (start >= this->size() || end > this->size() || start >= end) {
+            return res::err("Invalid range");
+        }
+        for (size_t i = end; i-- > start;) {
+            if (predicate((*this)[i])) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found in range");
+    }
+
+    result<T> rfind(const T& value, size_t start, size_t end) const {
+        if (start >= this->size() || end > this->size() || start >= end) {
+            return res::err("Invalid range");
+        }
+        for (size_t i = end; i-- > start;) {
+            if ((*this)[i] == value) {
+                return res::ok((*this)[i]);
+            }
+        }
+        return res::err("Item not found in range");
+    }
+
+    void sort(std::function<bool(const T&, const T&)> comp) {
+        std::sort(this->begin(), this->end(), comp);
+    }
 };

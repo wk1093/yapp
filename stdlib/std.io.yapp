@@ -3,11 +3,13 @@
 #import std.str
 #import std.result
 
-namespace io {
-    using FileReader = std::ifstream;
-    using FileWriter = std::ofstream;
-    using FileStream = std::fstream;
+struct pub file {
+    using reader = std::ifstream;
+    using writer = std::ofstream;
+    using stream = std::fstream;
+}
 
+namespace io {
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
     template<typename... Args>
     pub void print(Args... args) {
@@ -50,7 +52,7 @@ namespace io {
     }
 
     pub result<str> fileReadText(const str& filename) {
-        std::ifstream file(filename);
+        file::reader file(filename);
         if (!file.is_open()) {
             return res::err("Not Found: " + filename);
         }
@@ -64,7 +66,7 @@ namespace io {
     }
 
     pub result<bytestr> fileReadBin(const str& filename) {
-        std::ifstream file(filename, std::ios::binary);
+        file::reader file(filename, std::ios::binary);
         if (!file.is_open()) {
             return res::err("Not Found: " + filename);
         }
@@ -79,7 +81,7 @@ namespace io {
     }
 
     pub result<void> fileWrite(const str& filename, const str& content) {
-        std::ofstream file(filename);
+        file::writer file(filename);
         if (!file.is_open()) {
             return res::err("Not Found: " + filename);
         }
@@ -89,7 +91,7 @@ namespace io {
     }
 
     pub result<void> fileAppend(const str& filename, const str& content) {
-        std::ofstream file(filename, std::ios::app);
+        file::writer file(filename, std::ios::app);
         if (!file.is_open()) {
             return res::err("Not Found: " + filename);
         }
