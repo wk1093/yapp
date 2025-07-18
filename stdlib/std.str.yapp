@@ -3,7 +3,7 @@
 #import <vector>
 #import <cstdarg>
 
-pub class str : public std::string {
+class pub str : public std::string {
 public:
     using StringReader = std::istringstream;
     using StringWriter = std::ostringstream;

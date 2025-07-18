@@ -2,9 +2,13 @@
 #import std.str
 
 pub int main() {
-    int testValue = io::read<int>();
-    str testString = str::toString(testValue);
-    io::println("You entered: ", testString);
+    str filePath = "testfile.txt";
+
+    io::fileWrite(filePath, "Hello, World!").unwrap();
+
+    str content = io::fileReadText(filePath).unwrap();
+    io::print("File content: ", content);
+
     return 0;
 }
 
