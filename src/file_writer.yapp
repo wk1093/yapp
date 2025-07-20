@@ -231,6 +231,41 @@ priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen)
             if (!d.isDefinition && pubHasDefinition[d.name]) continue;
             if (d.isInline) continue;
             if (!d.isDefinition) continue;
+            if (d.kind == CXCursor_FunctionDecl || d.kind == CXCursor_CXXMethod) {
+                // functions with default parameters should have the default paremeters removed from the source (if they are in the header)
+                // find the first '(' and the ASSOCIATED ')' (not the first/last one)
+                size_t start = d.code.find('(', d.code.find(d.name));
+                int parenCount = 1;
+                size_t end = start+1;
+                while (end < d.code.size() && parenCount > 0) {
+                    if (d.code[end] == '(') {
+                        ++parenCount;
+                    } else if (d.code[end] == ')') {
+                        --parenCount;
+                    }
+                    ++end;
+                }
+                std::string params = d.code.substr(start + 1, end - start - 2);
+                if (parenCount == 0 && !params.empty() && params.find('=') != std::string::npos) {
+                    std::cout << "Removing default parameters from function: " << d.name << params << "\n";
+                    // We found the end of the parameters
+                    // Remove default parameters
+                    size_t pos = params.find('=');
+                    while (pos != std::string::npos) {
+                        size_t nextComma = params.find(',', pos);
+                        if (nextComma == std::string::npos) {
+                            params.erase(pos);
+                            break;
+                        } else {
+                            params.erase(pos, nextComma - pos + 1);
+                        }
+                        pos = params.find('=', pos);
+                    }
+                    // Reconstruct the code with the modified parameters
+                    std::string newCode = d.code.substr(0, start + 1) + params + d.code.substr(end - 1);
+                    const_cast<DeclInfo&>(d).code = newCode;
+                }
+            }
         }
         // static decls are allowed in source
         sourceDecls.push_back(d);

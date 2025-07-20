@@ -1,8 +1,11 @@
 #import std.io
 
+pub int function_with_default_param(int a, int b = 10) {
+    return a + b;
+}
+
 pub int main(vec<str> args) {
     io::println("This is a test.");
-    flap
     return 0;
 }
 

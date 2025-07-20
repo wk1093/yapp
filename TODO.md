@@ -9,6 +9,8 @@
 - [x] Custom inclusion system for including another yapp file instead of using #include "myfile.yapp.h"
 - [ ] maybe? Build system that will automatically build dependencies of the main yapp file
 - [x] BIG: Fix "using" to be default private and work properly.
-- [ ] HUGE: Ensure ALL C++ language features work correctly. combining advanced C++ syntax features with the new pub/priv system is tricky and needs to be tested thoroughly.
+- [ ] HUGE: Ensure ALL C++ language features work correctly.
 - [ ] HUGE: Fix class/struct members to be defined in the source and declared in the header. This will require a LOT of work.
-- [ ] Fix default parameters. Should only show up in the header, not the source (if it is split into header/source).
+- [x] BIG: Fix default parameters. Should only show up in the header, not the source (if it is split into header/source).
+- [ ] HUGE: Stdlib automatic flags. It would be nice to be able to include the YAPP stdlib without having to specify a bunch of flags.
+- [ ] HUGE: Fix the CMake build system to be more robust and easier to read.

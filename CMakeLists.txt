@@ -3,6 +3,7 @@ project(yapp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(RUN_YAPP_TESTS ON)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -93,11 +94,19 @@ add_custom_target(yapp_stdlib
     COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${YAPP_STD_OBJECTS} -Wl,-soname,libyapp.so -Wl,--no-undefined -fPIC
 )
 
-add_custom_target(yappc_test
-    DEPENDS yappc_compile
-    DEPENDS yapp_stdlib
-    COMMENT "Testing YAPP"
-    # Run the new yapp compiler on test files
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/runner.py
+if (RUN_YAPP_TESTS)
+    add_custom_target(yappc_test
+        DEPENDS yappc_compile
+        DEPENDS yapp_stdlib
+        COMMENT "Testing YAPP"
+        # Run the new yapp compiler on test files
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/runner.py
     )
+else()
+    add_custom_target(yappc_test
+        DEPENDS yappc_compile
+        DEPENDS yapp_stdlib
+        COMMENT "YAPP tests are disabled. Set RUN_YAPP_TESTS to ON to enable."
+    )
+endif()
