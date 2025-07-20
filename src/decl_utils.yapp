@@ -61,13 +61,49 @@ pub std::string toStdString(CXString cxStr) {
     return str;
 }
 
+extern std::string GLOBAL_INPUT_FILE;
+extern std::string GLOBAL_SOURCE_FILE;
+
+pub std::string createLineDirective(CXSourceLocation loc) {
+    CXFile file;
+    unsigned line, column, offset;
+    clang_getFileLocation(loc, &file, &line, &column, &offset);
+    CXString fileName = clang_getFileName(file);
+    std::string filePath = toStdString(fileName);
+    clang_disposeString(fileName);
+    // replace input file with source file
+    if (filePath == GLOBAL_INPUT_FILE) {
+        filePath = GLOBAL_SOURCE_FILE;
+    }
+    // create a #line directive for the file and line number
+    std::string lineDirective = "\n#line " + std::to_string(line) + " \"" + filePath + "\"\n";
+
+    return lineDirective;
+}
+
+pub bool isDifferentDirective(CXSourceLocation loc1, CXSourceLocation loc2) {
+    CXFile file1, file2;
+    unsigned line1, line2, column1, column2, offset1, offset2;
+    clang_getFileLocation(loc1, &file1, &line1, &column1, &offset1);
+    clang_getFileLocation(loc2, &file2, &line2, &column2, &offset2);
+    return (file1 != file2 || line1 != line2);
+}
+
 pub std::string getSourceText(CXCursor cursor, CXTranslationUnit tu) {
     CXSourceRange range = clang_getCursorExtent(cursor);
     CXToken* tokens = nullptr;
     unsigned numTokens = 0;
+    // get location to create a #line directive
+    CXSourceLocation loc = clang_getCursorLocation(cursor);
+    // tokenize the range
     clang_tokenize(tu, range, &tokens, &numTokens);
-    std::string result;
+    std::string result = createLineDirective(loc);
     for (unsigned i = 0; i < numTokens; ++i) {
+        CXSourceLocation tokenLoc = clang_getTokenLocation(tu, tokens[i]);
+        if (isDifferentDirective(loc, tokenLoc)) {
+            result += createLineDirective(tokenLoc);
+        }
+        loc = tokenLoc;
         result += toStdString(clang_getTokenSpelling(tu, tokens[i]));
         result += " ";
     }

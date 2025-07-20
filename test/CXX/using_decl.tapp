@@ -7,40 +7,40 @@
 using namespace std;
 
 @test check
-@c "using" not in h
-@c "using" in c
+@c "using namespace" not in h
+@c "using namespace" in c
 
 #import <iostream>
 
 priv using namespace std;
 
 @test check
-@c "using" in h
-@c "using" not in c
+@c "using namespace" in h
+@c "using namespace" not in c
 
 #import <iostream>
 
 pub using namespace std;
 
 @test check
-@c "using" in h
-@c "using" not in c
+@c "using namespace" in h
+@c "using namespace" not in c
 
 #import io
 
 using namespace io;
 
 @test check
-@c "using" not in h
-@c "using" in c
+@c "using namespace" not in h
+@c "using namespace" in c
 
 #import io
 
 priv using namespace io;
 
 @test check
-@c "using" in h
-@c "using" not in c
+@c "using namespace" in h
+@c "using namespace" not in c
 
 #import io
 

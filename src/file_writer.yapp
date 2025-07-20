@@ -186,7 +186,7 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
                     code.erase(0, code.find_first_not_of(" \t\n\r"));
                     code.erase(code.find_last_not_of(" \t\n\r") + 1);
                     if (!code.empty() && code.back() == ';') code.pop_back();
-                    copy.code = "extern " + code;
+                    copy.code = "extern \n" + code;
                 }
             }
             pubDecls.push_back(copy);

@@ -20,14 +20,14 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
     std::ostringstream out;
     std::string line;
 
-    out << "// YA++\n";
     if (stdlib) {
         preprocStored.push_back("include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n");
-        out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();\n";
+        out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();";
     }
+    
 
     std::regex pubPreproc(R"(^\s*#pub\s+(.*?)$)");
-    std::regex importPreproc(R"(^\s*#import\s+(.*?)$)"); // #import X should act like #pub include X
+    std::regex importPreproc(R"(^\s*#import\s+(.*?)$)");
         while (std::getline(in, line)) {
         std::smatch m;
         if (std::regex_search(line, m, pubPreproc)) {
@@ -95,7 +95,7 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
             std::string namespaceName = m[2].str(); // the namespace name
             // we add namespace NAME {} to make sure the namespace is defined
             // This is a workaround for the issue where clang removes using directives
-            out << "namespace " << namespaceName << " {};\n"; // Ensure the namespace is defined
+            out << "namespace " << namespaceName << " {};"; // Ensure the namespace is defined
             // If attr is empty, we assume it's a normal using directive
             if (attr.empty()) {
                 out << "using namespace " << namespaceName << ";\n";
@@ -115,9 +115,6 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
     p1f << out.str();
     p1f.close();
     return outFile;
-
-
-
 }
 
 priv const char* usageString = R"(
@@ -137,6 +134,9 @@ Compiler Args:
     These arguments are passed directly to the compiler (clang++).
     You can use -o to specify the output file.
 )";
+
+std::string GLOBAL_SOURCE_FILE;
+std::string GLOBAL_INPUT_FILE;
 
 pub int main(int argc, char** argv) {
     if (argc < 2) {
@@ -236,6 +236,7 @@ pub int main(int argc, char** argv) {
         outputDir = dir; // Default to same directory as input file
     }
 
+
     // pre-preprocessor step
     std::string step0File = prePreprocess(argv[1], outputDir, useStdlib);
     std::string step1File = preprocessStep2(step0File, outputDir);
@@ -266,8 +267,6 @@ pub int main(int argc, char** argv) {
     while (std::getline(preprocFile, line)) {
         if (line.empty() || line[0] != '#') {
             cleanedOutput << line << "\n";
-        } else {
-            cleanedOutput << "\n";
         }
     }
     preprocFile.close();
@@ -284,10 +283,15 @@ pub int main(int argc, char** argv) {
         "-x", "c++-cpp-output",
         "-std=c++20",
         "-Dpub=__attribute__((annotate(\"pub\")))",
-        "-Dpriv=__attribute__((annotate(\"priv\")))"
+        "-Dpriv=__attribute__((annotate(\"priv\")))",
+        "-P"
     };
+
+    GLOBAL_SOURCE_FILE = argv[1];
+    GLOBAL_INPUT_FILE = preprocOutputFile.c_str();
+
     CXTranslationUnit tu = clang_parseTranslationUnit(
-        index, preprocOutputFile.c_str(), args, sizeof(args)/sizeof(args[0]), nullptr, 0, CXTranslationUnit_None);
+        index, preprocOutputFile.c_str(), args, sizeof(args)/sizeof(args[0]), nullptr, 0, CXTranslationUnit_Incomplete | CXTranslationUnit_DetailedPreprocessingRecord);
     if (!tu) {
         if (unsigned numErrors = clang_getNumDiagnostics(tu)) {
             unsigned displayOptions = clang_defaultDiagnosticDisplayOptions();
@@ -311,7 +315,7 @@ pub int main(int argc, char** argv) {
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
     if (compileGenerated) {
-        std::cout << "WARNING: Auto compiling generated files is not recommended. Use with caution.";
+        std::cout << "WARNING: Auto compiling generated files is not recommended. Use with caution." << std::endl;
         std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
         std::string compileCommand = "clang++ \"" + outdirfilename + "\" ";
         for (const auto& arg : compileArgs) {

@@ -7,7 +7,7 @@ struct pub file {
     using reader = std::ifstream;
     using writer = std::ofstream;
     using stream = std::fstream;
-}
+};
 
 namespace io {
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout

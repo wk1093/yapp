@@ -2,7 +2,7 @@
 
 pub int main(vec<str> args) {
     io::println("This is a test.");
-
+    flap
     return 0;
 }
 
