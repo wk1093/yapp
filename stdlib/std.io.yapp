@@ -3,13 +3,17 @@
 #import std.str
 #import std.result
 
-struct pub file {
+namespace file {
     using reader = std::ifstream;
     using writer = std::ofstream;
     using stream = std::fstream;
 };
 
 namespace io {
+    enum io_output_stream_type {
+        out,
+        err
+    }
     // alternate to printf for output. instead of using a formatted string, all the arguments ar outputter with std::cout
     template<typename... Args>
     pub void print(Args... args) {
@@ -17,9 +21,40 @@ namespace io {
     }
 
     template<typename... Args>
+    pub void print(io_output_stream_type type, Args... args) {
+        if (type == out) {
+            (void)std::initializer_list<int>{(std::cout << args, 0)...};
+        } else {
+            (void)std::initializer_list<int>{(std::cerr << args, 0)...};
+        }
+    }
+
+    template<typename... Args>
+    pub void print(std::ostream& stream, Args... args) {
+        (void)std::initializer_list<int>{(stream << args, 0)...};
+    }
+
+    template<typename... Args>
     pub void println(Args... args) {
         (void)std::initializer_list<int>{(std::cout << args, 0)...};
         std::cout << std::endl;
+    }
+
+    template<typename... Args>
+    pub void println(io_output_stream_type type, Args... args) {
+        if (type == out) {
+            (void)std::initializer_list<int>{(std::cout << args, 0)...};
+            std::cout << std::endl;
+        } else {
+            (void)std::initializer_list<int>{(std::cerr << args, 0)...};
+            std::cerr << std::endl;
+        }
+    }
+
+    template<typename... Args>
+    pub void println(std::ostream& stream, Args... args) {
+        (void)std::initializer_list<int>{(stream << args, 0)...};
+        stream << std::endl;
     }
 
     template<typename... Args>

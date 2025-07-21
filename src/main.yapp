@@ -125,6 +125,42 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
     return outFile;
 }
 
+pub void postProcess(const std::string& headerFile) {
+    std::ifstream in(headerFile);
+    if (!in) {
+        std::cerr << "Failed to open input header file for post-processing: " << headerFile << "\n";
+        exit(1);
+    }
+    std::ostringstream out;
+    std::string line;
+    std::regex usingAliasRegex(R"(__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"pub"\s*\)\s*\)\s*\)\s*__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"__pub_using_alias__"\s*\)\s*\)\s*\)\s*void\s+__pub_using_alias__(\d+)\s*\(\s*\)\s*;)");
+    while (std::getline(in, line)) {
+        std::smatch m;
+        if (std::regex_search(line, m, usingAliasRegex)) {
+            // We found a using alias declaration
+            // We need to replace it with the actual using alias from usingStored
+            int index = std::stoi(m[1].str());
+            if (index < 0 || index >= usingStored.size()) {
+                std::cerr << "Error: Using alias index out of bounds: " << index << "\n";
+                exit(1);
+            }
+            out << usingStored[index] << "\n"; // Replace with the actual using alias
+        } else {
+            out << line << "\n"; // Keep the line as is
+        }
+    }
+
+    in.close();
+
+    std::ofstream outFileStream(headerFile);
+    if (!outFileStream) {
+        std::cerr << "Failed to write post-processed header file: " << headerFile << "\n";
+        exit(1);
+    }
+    outFileStream << out.str();
+    outFileStream.close();
+}
+
 priv const char* usageString = R"(
 Usage: yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]
 Options:
@@ -338,6 +374,11 @@ pub int main(vec<str> argv) {
     writeFiles(filename, outputDir);
     clang_disposeTranslationUnit(tu);
     clang_disposeIndex(index);
+
+    // Post-process the header file if it was generated
+    std::string headerFile = std::filesystem::path(outputDir) / (filename + ".yapp.h");
+    postProcess(headerFile);
+
     if (compileGenerated) {
         std::cout << "WARNING: Auto compiling generated files is not recommended. Use with caution." << std::endl;
         std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
