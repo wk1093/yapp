@@ -3,15 +3,17 @@
 #define priv
 
 // Emitted by yappc
-// Emitting 18 declarations
+// Emitting 20 declarations
 
+#include "std.main.yapp.h"
+#include "std.str.yapp.h"
+#include "std.vec.yapp.h"
+#include "std.result.yapp.h"
+#include "std.stream.yapp.h"
 
 ;
 
-#include "file_writer.yapp.h"
-;
-
-#include "visitor.yapp.h"
+#include "std.io.yapp.h"
 ;
 
 #include <filesystem>
@@ -38,33 +40,43 @@
 #include <regex>
 ;
 
-extern 
-#line 12 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < std :: string > preprocStored;
+#include "file_writer.yapp.h"
+;
+
+#include "visitor.yapp.h"
+;
 
 extern 
-#line 13 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < std :: string > usingStored;
-
-
 #line 15 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string prePreprocess ( const std :: string & inputFile , const std :: string & outputDir , bool stdlib ) ;;
-
-
-#line 75 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string preprocessStep2 ( const std :: string & p0File , const std :: string & outputDir ) ;;
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < str > preprocStored;
 
 extern 
-#line 145 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-std :: string GLOBAL_SOURCE_FILE;
+#line 16 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < str > usingStored;
+
+
+#line 18 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) str prePreprocess ( const str & inputFile , const str & outputDir , bool stdlib ) ;;
+
+
+#line 86 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) str preprocessStep2 ( const str & p0File , const str & outputDir ) ;;
+
+
+#line 139 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) void postProcess ( const str & headerFile ) ;;
 
 extern 
-#line 146 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-std :: string GLOBAL_INPUT_FILE;
+#line 192 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+str GLOBAL_SOURCE_FILE;
+
+extern 
+#line 193 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+str GLOBAL_INPUT_FILE;
 
 
-#line 148 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) int main ( int argc, char ** argv ) ;;
+#line 195 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) int main ( vec < str > argv ) ;;
 
 #undef pub
 #undef priv

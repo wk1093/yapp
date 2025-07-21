@@ -203,18 +203,6 @@ pub int main(vec<str> argv) {
     vec<str> preprocArgs;
     vec<str> compileArgs;
     vec<str> myArgs;
-    // bool isPreprocArgs = true;
-    // for (int i = 2; i < argc; ++i) {
-    //     if (strcmp(argv[i], "--") == 0) {
-    //         isPreprocArgs = false;
-    //         continue;
-    //     }
-    //     if (isPreprocArgs) {
-    //         preprocArgs.push_back(argv[i]);
-    //     } else {
-    //         compileArgs.push_back(argv[i]);
-    //     }
-    // }
 
     int argState = 0; // 0: myargs, 1: preprocArgs, 2: compileArgs
     for (int i = 2; i < argc; ++i) {
@@ -230,21 +218,6 @@ pub int main(vec<str> argv) {
             compileArgs.push_back(argv[i]);
         }
     }
-    std::cout << "Preprocessor Args: ";
-    for (const auto& arg : preprocArgs) {
-        std::cout << arg << " ";
-    }
-    std::cout << "\n";
-    std::cout << "Compiler Args: ";
-    for (const auto& arg : compileArgs) {
-        std::cout << arg << " ";
-    }
-    std::cout << "\n";
-    std::cout << "My Args: ";
-    for (const auto& arg : myArgs) {
-        std::cout << arg << " ";
-    }
-    std::cout << "\n";
     // Check for -d option in myArgs
     bool debugMode = false;
     bool sourceToggle = false;

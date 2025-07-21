@@ -5,6 +5,11 @@
 // Emitted by yappc
 // Emitting 12 declarations
 
+#include "std.main.yapp.h"
+#include "std.str.yapp.h"
+#include "std.vec.yapp.h"
+#include "std.result.yapp.h"
+#include "std.stream.yapp.h"
 
 ;
 
@@ -28,7 +33,7 @@
 
 extern 
 #line 8 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < DeclInfo > decls;
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < DeclInfo > decls;
 
 extern 
 #line 9 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -36,11 +41,11 @@ __attribute__ ( ( annotate ( "pub" ) ) ) int orderCounter;
 
 extern 
 #line 10 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: unordered_set < std :: string > typedefBackedTags;
+__attribute__ ( ( annotate ( "pub" ) ) ) std :: unordered_set < str > typedefBackedTags;
 
 extern 
 #line 11 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < std :: string > anonymousTypes;
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < str > anonymousTypes;
 
 
 #line 112 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"

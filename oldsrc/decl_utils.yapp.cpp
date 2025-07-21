@@ -70,9 +70,9 @@ return ( d . kind == CXCursor_StructDecl ) && d . name . empty ( ) ;
 
 
 #line 58 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string toStdString ( CXString cxStr ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) str toStdString ( CXString cxStr ) { 
 #line 59 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string str = clang_getCString ( cxStr ) ; 
+str str = clang_getCString ( cxStr ) ; 
 #line 60 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 clang_disposeString ( cxStr ) ; 
 #line 61 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -82,7 +82,7 @@ return str ;
 
 
 #line 67 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string createLineDirective ( CXSourceLocation loc ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) str createLineDirective ( CXSourceLocation loc ) { 
 #line 68 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 CXFile file ; 
 #line 69 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -92,7 +92,7 @@ clang_getFileLocation ( loc , & file , & line , & column , & offset ) ;
 #line 71 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 CXString fileName = clang_getFileName ( file ) ; 
 #line 72 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string filePath = toStdString ( fileName ) ; 
+str filePath = toStdString ( fileName ) ; 
 #line 73 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 clang_disposeString ( fileName ) ; 
 #line 75 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -102,7 +102,7 @@ filePath = GLOBAL_SOURCE_FILE ;
 #line 77 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 } 
 #line 79 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string lineDirective = "\n#line " + std :: to_string ( line ) + " \"" + filePath + "\"\n" ; 
+str lineDirective = "\n#line " + std :: to_string ( line ) + " \"" + filePath + "\"\n" ; 
 #line 81 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 return lineDirective ; 
 #line 82 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -126,7 +126,7 @@ return ( file1 != file2 || line1 != line2 ) ;
 
 
 #line 92 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string getSourceText ( CXCursor cursor , CXTranslationUnit tu ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) str getSourceText ( CXCursor cursor , CXTranslationUnit tu ) { 
 #line 93 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 CXSourceRange range = clang_getCursorExtent ( cursor ) ; 
 #line 94 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -138,7 +138,7 @@ CXSourceLocation loc = clang_getCursorLocation ( cursor ) ;
 #line 99 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 clang_tokenize ( tu , range , & tokens , & numTokens ) ; 
 #line 100 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string result = createLineDirective ( loc ) ; 
+str result = createLineDirective ( loc ) ; 
 #line 101 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 for ( unsigned i = 0 ; i < numTokens ; ++ i ) { 
 #line 102 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -166,17 +166,17 @@ return result ;
 
 
 #line 114 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string getAnnotate ( CXCursor cursor ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) str getAnnotate ( CXCursor cursor ) { 
 #line 115 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string annotation = "" ; 
+str annotation = "" ; 
 #line 116 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 clang_visitChildren ( cursor , [ ] ( CXCursor c , CXCursor , CXClientData data ) { 
 #line 117 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 if ( clang_getCursorKind ( c ) == CXCursor_AnnotateAttr ) { 
 #line 118 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-auto str = toStdString ( clang_getCursorSpelling ( c ) ) ; 
+auto stri = toStdString ( clang_getCursorSpelling ( c ) ) ; 
 #line 119 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-* static_cast < std :: string * > ( data ) = str ; 
+* static_cast < str * > ( data ) = stri ; 
 #line 120 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 return CXChildVisit_Break ; 
 #line 121 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -192,9 +192,9 @@ return annotation ;
 
 
 #line 127 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < std :: string > getNamespaceChain ( CXCursor cursor ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < str > getNamespaceChain ( CXCursor cursor ) { 
 #line 128 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: vector < std :: string > chain ; 
+vec < str > chain ; 
 #line 129 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 CXCursor parent = clang_getCursorSemanticParent ( cursor ) ; 
 #line 130 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -202,7 +202,7 @@ while ( ! clang_Cursor_isNull ( parent ) && clang_getCursorKind ( parent ) != CX
 #line 131 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 if ( clang_getCursorKind ( parent ) == CXCursor_Namespace ) { 
 #line 132 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string ns = toStdString ( clang_getCursorSpelling ( parent ) ) ; 
+str ns = toStdString ( clang_getCursorSpelling ( parent ) ) ; 
 #line 133 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 chain . push_back ( ns ) ; 
 #line 134 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
@@ -220,15 +220,15 @@ return chain ;
 
 
 #line 141 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: string makeDeclaration ( const std :: string & code ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) str makeDeclaration ( const str & code ) { 
 #line 142 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-std :: string trimmed = code ; 
+str trimmed = code ; 
 #line 143 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 trimmed . erase ( trimmed . find_last_not_of ( " \t\n\r" ) + 1 ) ; 
 #line 144 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 size_t brace = trimmed . find ( '{' ) ; 
 #line 145 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-if ( brace != std :: string :: npos ) { 
+if ( brace != str :: npos ) { 
 #line 146 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 trimmed = trimmed . substr ( 0 , brace ) ; 
 #line 147 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"

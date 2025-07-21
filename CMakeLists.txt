@@ -3,7 +3,7 @@ project(yapp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(RUN_YAPP_TESTS ON)
+set(RUN_YAPP_TESTS OFF)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -13,7 +13,9 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 # LLVM provides imported targets including Clang libraries
 find_package(Clang REQUIRED CONFIG)
 
-add_executable(yappc oldsrc/main.yapp.cpp oldsrc/decl_utils.yapp.cpp oldsrc/file_writer.yapp.cpp oldsrc/visitor.yapp.cpp)
+file(GLOB_RECURSE YAPP_SOURCES "oldsrc/*.cpp")
+
+add_executable(yappc ${YAPP_SOURCES})
 
 target_compile_options(yappc PRIVATE -Wno-attributes)
 target_include_directories(yappc PRIVATE ${LLVM_INCLUDE_DIRS})

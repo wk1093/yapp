@@ -8,7 +8,7 @@
 
 
 #line 8 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < DeclInfo > decls ;
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < DeclInfo > decls ;
 
 
 #line 9 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -16,11 +16,11 @@ __attribute__ ( ( annotate ( "pub" ) ) ) int orderCounter = 0 ;
 
 
 #line 10 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: unordered_set < std :: string > typedefBackedTags ;
+__attribute__ ( ( annotate ( "pub" ) ) ) std :: unordered_set < str > typedefBackedTags ;
 
 
 #line 11 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) std :: vector < std :: string > anonymousTypes ;
+__attribute__ ( ( annotate ( "pub" ) ) ) vec < str > anonymousTypes ;
 
 
 #line 13 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -56,7 +56,7 @@ for ( unsigned i = 0 ; i < numTokens ; ++ i ) {
 #line 28 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 CXString spelling = clang_getTokenSpelling ( tu , tokens [ i ] ) ; 
 #line 29 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-std :: string tokenStr = clang_getCString ( spelling ) ; 
+str tokenStr = clang_getCString ( spelling ) ; 
 #line 30 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 clang_disposeString ( spelling ) ; 
 #line 32 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -108,7 +108,7 @@ for ( unsigned i = 0 ; i < numTokens ; ++ i ) {
 #line 57 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 CXString spelling = clang_getTokenSpelling ( tu , tokens [ i ] ) ; 
 #line 58 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-std :: string tokenStr = clang_getCString ( spelling ) ; 
+str tokenStr = clang_getCString ( spelling ) ; 
 #line 59 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 clang_disposeString ( spelling ) ; 
 #line 61 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -160,7 +160,7 @@ for ( unsigned i = 0 ; i < numTokens ; ++ i ) {
 #line 87 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 CXString spelling = clang_getTokenSpelling ( tu , tokens [ i ] ) ; 
 #line 88 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-std :: string tokenStr = clang_getCString ( spelling ) ; 
+str tokenStr = clang_getCString ( spelling ) ; 
 #line 89 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 clang_disposeString ( spelling ) ; 
 #line 91 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -226,7 +226,7 @@ return CXChildVisit_Recurse ;
 #line 122 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 } 
 #line 123 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-std :: string annotation = getAnnotate ( cursor ) ; 
+str annotation = getAnnotate ( cursor ) ; 
 #line 124 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 if ( isUsingDec ( cursor ) && annotation . empty ( ) ) { 
 #line 125 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
@@ -382,11 +382,11 @@ auto kind = clang_getCursorKind ( c ) ;
 #line 206 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 if ( kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl ) { 
 #line 207 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-std :: string structName = toStdString ( clang_getCursorUSR ( c ) ) ; 
+str structName = toStdString ( clang_getCursorUSR ( c ) ) ; 
 #line 208 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 if ( ! structName . empty ( ) ) { 
 #line 209 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
-static_cast < std :: unordered_set < std :: string > * > ( client_data ) -> insert ( structName ) ; 
+static_cast < std :: unordered_set < str > * > ( client_data ) -> insert ( structName ) ; 
 #line 210 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"
 } 
 #line 211 "/home/wyatt/dev/cpp/pubprivattr/src/visitor.yapp"

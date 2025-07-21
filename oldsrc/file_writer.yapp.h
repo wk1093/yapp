@@ -3,9 +3,17 @@
 #define priv
 
 // Emitted by yappc
-// Emitting 12 declarations
+// Emitting 13 declarations
 
+#include "std.main.yapp.h"
+#include "std.str.yapp.h"
+#include "std.vec.yapp.h"
+#include "std.result.yapp.h"
+#include "std.stream.yapp.h"
 
+;
+
+#include "std.io.yapp.h"
 ;
 
 #include <clang-c/Index.h>
@@ -39,8 +47,8 @@
 ;
 
 
-#line 293 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) void writeFiles ( const std :: string & base , const std :: string & dir ) ;;
+#line 295 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) void writeFiles ( const str & base , const str & dir ) ;;
 
 #undef pub
 #undef priv
