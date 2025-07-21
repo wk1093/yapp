@@ -80,7 +80,6 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
     std::ostringstream out;
     std::string line;
 
-    // should match using namespace X::Y; but also match pub using namespace X::Y; and priv using namespace X::Y;
     // also doesn't need to be at the start of the line
     std::regex usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
     // with the custom import system, sometimes clang will remove using directives because "the namespace doesn't exist"
@@ -138,7 +137,8 @@ Compiler Args:
 std::string GLOBAL_SOURCE_FILE;
 std::string GLOBAL_INPUT_FILE;
 
-pub int main(int argc, char** argv) {
+pub int main(vec<str> argv) {
+    int argc = argv.size();
     if (argc < 2) {
         std::cerr << "Usage: ./yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]\n";
         return 1;
@@ -162,7 +162,7 @@ pub int main(int argc, char** argv) {
 
     int argState = 0; // 0: myargs, 1: preprocArgs, 2: compileArgs
     for (int i = 2; i < argc; ++i) {
-        if (strcmp(argv[i], "--") == 0) {
+        if (argv[i] == "--") {
             argState++;
             continue;
         }
@@ -174,6 +174,21 @@ pub int main(int argc, char** argv) {
             compileArgs.push_back(argv[i]);
         }
     }
+    std::cout << "Preprocessor Args: ";
+    for (const auto& arg : preprocArgs) {
+        std::cout << arg << " ";
+    }
+    std::cout << "\n";
+    std::cout << "Compiler Args: ";
+    for (const auto& arg : compileArgs) {
+        std::cout << arg << " ";
+    }
+    std::cout << "\n";
+    std::cout << "My Args: ";
+    for (const auto& arg : myArgs) {
+        std::cout << arg << " ";
+    }
+    std::cout << "\n";
     // Check for -d option in myArgs
     bool debugMode = false;
     bool sourceToggle = false;
@@ -291,7 +306,7 @@ pub int main(int argc, char** argv) {
     GLOBAL_INPUT_FILE = preprocOutputFile.c_str();
 
     CXTranslationUnit tu = clang_parseTranslationUnit(
-        index, preprocOutputFile.c_str(), args, sizeof(args)/sizeof(args[0]), nullptr, 0, CXTranslationUnit_Incomplete | CXTranslationUnit_DetailedPreprocessingRecord);
+        index, preprocOutputFile.c_str(), args, sizeof(args)/sizeof(args[0]), nullptr, 0, CXTranslationUnit_Incomplete);
     if (!tu) {
         if (unsigned numErrors = clang_getNumDiagnostics(tu)) {
             unsigned displayOptions = clang_defaultDiagnosticDisplayOptions();

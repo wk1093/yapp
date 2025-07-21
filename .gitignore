@@ -4,3 +4,4 @@ build/
 test_output/
 a.out
 testdir/
+cloc.sh

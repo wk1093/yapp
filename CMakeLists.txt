@@ -13,8 +13,9 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 # LLVM provides imported targets including Clang libraries
 find_package(Clang REQUIRED CONFIG)
 
-add_executable(yappc oldsrc/main.cpp oldsrc/decl_utils.cpp oldsrc/file_writer.cpp oldsrc/visitor.cpp)
+add_executable(yappc oldsrc/main.yapp.cpp oldsrc/decl_utils.yapp.cpp oldsrc/file_writer.yapp.cpp oldsrc/visitor.yapp.cpp)
 
+target_compile_options(yappc PRIVATE -Wno-attributes)
 target_include_directories(yappc PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(yappc PRIVATE
     libclang
@@ -33,31 +34,6 @@ target_link_libraries(yappc PRIVATE Threads::Threads)
 
 set(YAPP_OLD_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/yappc")
 
-
-set(YAPP_COMPILER_FLAGS "-I${CMAKE_CURRENT_BINARY_DIR}/stdlib")
-set(YAPP_LINK_FLAGS "-L${CMAKE_CURRENT_BINARY_DIR}/stdlib -lyapp")
-
-add_custom_target(yappc_compile
-    DEPENDS yappc
-    COMMENT "Compiling YAPP"
-    # make dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/custom
-    # compile the yapp sources into c++
-    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
-    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/visitor.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
-    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/file_writer.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
-    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/decl_utils.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
-    # compile the generated c++ files
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.yapp.cpp -lclang -Wno-attributes
-    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o ${YAPP_COMPILER_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/main.yapp.cpp -lclang -Wno-attributes
-    # link the generated c++ files into a new yapp compiler
-    COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/custom/yappc ${YAPP_LINK_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o -lclang
-)
-
-set(YAPP_NEW_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/custom/yappc")
-
 set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.io.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.result.yapp
@@ -75,13 +51,13 @@ foreach(source ${YAPP_STD_SOURCES})
     get_filename_component(source_name ${source} NAME)
     set(output_file "${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.cpp")
     get_filename_component(output_file_dir ${output_file} DIRECTORY)
-    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_NEW_COMPILER} ${source} -o ${output_file_dir} --no-std)
+    list(APPEND YAPP_STD_PREPROC_COMMANDS COMMAND ${YAPP_OLD_COMPILER} ${source} -o ${output_file_dir} --no-std)
     list(APPEND YAPP_STD_COMPILE_COMMANDS COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o ${output_file} -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC)
     list(APPEND YAPP_STD_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/stdlib/${source_name}.o)
 endforeach()
 
 add_custom_target(yapp_stdlib
-    DEPENDS yappc_compile
+    DEPENDS yappc
     COMMENT "Compiling YAPP standard library"
     
     # make dir
@@ -93,6 +69,41 @@ add_custom_target(yapp_stdlib
     # link the generated c++ files into a shared library
     COMMAND ${CMAKE_CXX_COMPILER} -shared -o ${CMAKE_CURRENT_BINARY_DIR}/stdlib/libyapp.so ${YAPP_STD_OBJECTS} -Wl,-soname,libyapp.so -Wl,--no-undefined -fPIC
 )
+
+set(YAPP_COMPILE_FLAGS
+    -I${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    -Wno-attributes
+)
+
+set(YAPP_LINK_FLAGS
+    -L${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    -Wl,-rpath,${CMAKE_CURRENT_BINARY_DIR}/stdlib
+    -lyapp
+    -lclang
+)
+
+add_custom_target(yappc_compile
+    DEPENDS yappc
+    DEPENDS yapp_stdlib
+    COMMENT "Compiling YAPP"
+    # make dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/custom
+    # compile the yapp sources into c++
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/visitor.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/file_writer.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
+    COMMAND ${YAPP_OLD_COMPILER} ${CMAKE_CURRENT_SOURCE_DIR}/src/decl_utils.yapp -o ${CMAKE_CURRENT_BINARY_DIR}/custom
+
+    # compile the generated c++ files
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${YAPP_COMPILE_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.yapp.cpp
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${YAPP_COMPILE_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.yapp.cpp
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${YAPP_COMPILE_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.yapp.cpp
+    COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o ${YAPP_COMPILE_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/main.yapp.cpp
+    # link the generated c++ files into a new yapp compiler
+    COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/custom/yappc ${YAPP_LINK_FLAGS} ${CMAKE_CURRENT_BINARY_DIR}/custom/decl_utils.o ${CMAKE_CURRENT_BINARY_DIR}/custom/visitor.o ${CMAKE_CURRENT_BINARY_DIR}/custom/file_writer.o ${CMAKE_CURRENT_BINARY_DIR}/custom/main.o
+)
+
+set(YAPP_NEW_COMPILER "${CMAKE_CURRENT_BINARY_DIR}/custom/yappc")
 
 if (RUN_YAPP_TESTS)
     add_custom_target(yappc_test
