@@ -7,8 +7,8 @@
 #import <algorithm>
 #import <string>
 
-#import "visitor.yapp"
-#import "decl_utils.yapp"
+#import visitor
+#import decl_utils
 
 priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
     out << "// Emitted by yappc\n";

@@ -1,5 +1,5 @@
-#import "file_writer.yapp"
-#import "visitor.yapp"
+#import file_writer
+#import visitor
 #import <filesystem>
 #import <vector>
 #import <string>
