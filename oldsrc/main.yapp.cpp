@@ -43,6 +43,7 @@ out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0
 std :: regex pubPreproc ( R"(^\s*#pub\s+(.*?)$)" ) ; 
 #line 31 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 std :: regex importPreproc ( R"(^\s*#import\s+(.*?)$)" ) ; 
+std::regex usingDefRegex(R"(^\s*#using\s+(.*?)$)");
 #line 32 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 while ( std :: getline ( in , line ) ) { 
 #line 33 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
@@ -92,7 +93,15 @@ preprocStored . push_back ( "include " + importedFile ) ;
 #line 59 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored . size ( ) - 1 << "();\n" ; 
 #line 60 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-} else { 
+} 
+else if (std::regex_search(line, m, usingDefRegex)) {
+            // We found a #using directive
+            // We need to add it to the usingStored vector
+            out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
+
+            usingStored.push_back(m[1].str());
+        }
+else { 
 #line 61 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 out << line << "\n" ; 
 #line 62 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"

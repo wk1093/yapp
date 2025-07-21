@@ -1,5 +1,5 @@
-#import file_writer
-#import visitor
+#import std.io
+
 #import <filesystem>
 #import <vector>
 #import <string>
@@ -9,17 +9,21 @@
 #import <cstring>
 #import <regex>
 
-pub std::vector<std::string> preprocStored;
-pub std::vector<std::string> usingStored;
+#import file_writer
+#import visitor
 
-pub std::string prePreprocess(const std::string& inputFile, const std::string& outputDir, bool stdlib) {
+pub vec<str> preprocStored;
+pub vec<str> usingStored;
+
+pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
     std::ifstream in(inputFile);
     if (!in) {
-        std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
+        // std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
+        io::println(io::err, "Failed to open input file for pre-preprocessing: ", inputFile);
         exit(1);
     }
     std::ostringstream out;
-    std::string line;
+    str line;
 
     if (stdlib) {
         preprocStored.push_back("include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n");
@@ -29,13 +33,14 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
 
     std::regex pubPreproc(R"(^\s*#pub\s+(.*?)$)");
     std::regex importPreproc(R"(^\s*#import\s+(.*?)$)");
+    std::regex usingDefRegex(R"(^\s*#using\s+(.*?)$)");
         while (std::getline(in, line)) {
         std::smatch m;
         if (std::regex_search(line, m, pubPreproc)) {
             preprocStored.push_back(m[1].str());
             out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
         } else if (std::regex_search(line, m, importPreproc)) {
-            std::string importedFile = m[1].str();
+            str importedFile = m[1].str();
             // if it is "something.yapp" or <something.yapp> we need to convert it to "something.yapp.h" or <something.yapp.h>
             
             bool angledQuotes = (importedFile[0] == '<' && importedFile[importedFile.size() - 1] == '>');
@@ -44,7 +49,7 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
                 // Remove the angled or double quotes
                 importedFile = importedFile.substr(1, importedFile.size() - 2);
             }
-            if (importedFile.find(".yapp") != std::string::npos) {
+            if (importedFile.find(".yapp") != str::npos) {
                 importedFile = importedFile.substr(0, importedFile.find_last_of('.')) + ".yapp.h";
             }
             if (angledQuotes) {
@@ -57,11 +62,17 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
             
             preprocStored.push_back("include " + importedFile);
             out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__" << preprocStored.size() - 1 << "();\n";
+        } else if (std::regex_search(line, m, usingDefRegex)) {
+            // We found a #using directive
+            // We need to add it to the usingStored vector
+            out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
+
+            usingStored.push_back(m[1].str());
         } else {
             out << line << "\n";
         }
     }
-    std::string outFile = std::filesystem::path(outputDir) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
+    str outFile = std::filesystem::path(outputDir.stdstr()) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
     std::ofstream p0f(outFile);
     if (!p0f) {
         std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
@@ -72,14 +83,14 @@ pub std::string prePreprocess(const std::string& inputFile, const std::string& o
     return outFile;
 }
 
-pub std::string preprocessStep2(const std::string& p0File, const std::string& outputDir) {
+pub str preprocessStep2(const str& p0File, const str& outputDir) {
     std::ifstream in(p0File);
     if (!in) {
         std::cerr << "Failed to open pre-preprocessed file for second preprocessing: " << p0File << "\n";
         exit(1);
     }
     std::ostringstream out;
-    std::string line;
+    str line;
 
     // also doesn't need to be at the start of the line
     std::regex usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
@@ -92,8 +103,8 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
             // We found a using namespace directive
             // We need to check if it is a pub or priv using namespace directive
             // If it is, we need to add the pub/priv attribute to the declaration
-            std::string attr = m[1].str(); // "pub" or "priv"
-            std::string namespaceName = m[2].str(); // the namespace name
+            str attr = m[1].str(); // "pub" or "priv"
+            str namespaceName = m[2].str(); // the namespace name
             // we add namespace NAME {} to make sure the namespace is defined
             // This is a workaround for the issue where clang removes using directives
             out << "namespace " << namespaceName << " {};"; // Ensure the namespace is defined
@@ -114,7 +125,7 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
             out << line << "\n";
         }
     }
-    std::string outFile = std::filesystem::path(outputDir) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
+    str outFile = std::filesystem::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
     std::ofstream p1f(outFile);
     if (!p1f) {
         std::cerr << "Failed to write second preprocessed file: " << outFile << "\n";
@@ -125,14 +136,14 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
     return outFile;
 }
 
-pub void postProcess(const std::string& headerFile) {
+pub void postProcess(const str& headerFile) {
     std::ifstream in(headerFile);
     if (!in) {
         std::cerr << "Failed to open input header file for post-processing: " << headerFile << "\n";
         exit(1);
     }
     std::ostringstream out;
-    std::string line;
+    str line;
     std::regex usingAliasRegex(R"(__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"pub"\s*\)\s*\)\s*\)\s*__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"__pub_using_alias__"\s*\)\s*\)\s*\)\s*void\s+__pub_using_alias__(\d+)\s*\(\s*\)\s*;)");
     while (std::getline(in, line)) {
         std::smatch m;
@@ -179,8 +190,8 @@ Compiler Args:
     You can use -o to specify the output file.
 )";
 
-std::string GLOBAL_SOURCE_FILE;
-std::string GLOBAL_INPUT_FILE;
+str GLOBAL_SOURCE_FILE;
+str GLOBAL_INPUT_FILE;
 
 pub int main(vec<str> argv) {
     int argc = argv.size();
@@ -189,9 +200,9 @@ pub int main(vec<str> argv) {
         return 1;
     }
 
-    std::vector<std::string> preprocArgs;
-    std::vector<std::string> compileArgs;
-    std::vector<std::string> myArgs;
+    vec<str> preprocArgs;
+    vec<str> compileArgs;
+    vec<str> myArgs;
     // bool isPreprocArgs = true;
     // for (int i = 2; i < argc; ++i) {
     //     if (strcmp(argv[i], "--") == 0) {
@@ -240,9 +251,9 @@ pub int main(vec<str> argv) {
     bool removeHeader = false;
     bool compileGenerated = false;
     bool useStdlib = true;
-    std::string outputDir = ""; // Default to same directory as input file
+    str outputDir = ""; // Default to same directory as input file
     for (int i = 0; i < myArgs.size(); i++) {
-        std::string arg = myArgs[i];
+        str arg = myArgs[i];
         if (arg == "-s") {
             sourceToggle = true;
         }
@@ -266,7 +277,7 @@ pub int main(vec<str> argv) {
             } else {
                 outputDir = myArgs[i + 1];
                 i++; // Skip the next argument since it's the directory
-                std::filesystem::path dirPath(outputDir);
+                std::filesystem::path dirPath(outputDir.stdstr());
                 if (!std::filesystem::exists(dirPath)) {
                     std::cerr << "Warning: Specified output directory does not exist. Creating: " << outputDir << "\n";
                     std::filesystem::create_directories(dirPath);
@@ -287,24 +298,24 @@ pub int main(vec<str> argv) {
         }
     }
 
-    std::string base = argv[1];
+    str base = argv[1];
     size_t slash = base.find_last_of("/\\");
     size_t dot = base.find_last_of('.');
-    std::string filename = base.substr(slash == std::string::npos ? 0 : slash + 1, dot - (slash == std::string::npos ? 0 : slash + 1));
-    std::string dir = (slash == std::string::npos) ? "./" : base.substr(0, slash + 1);
+    str filename = base.substr(slash == str::npos ? 0 : slash + 1, dot - (slash == str::npos ? 0 : slash + 1));
+    str dir = (slash == str::npos) ? "./" : base.substr(0, slash + 1);
     if (outputDir.empty()) {
         outputDir = dir; // Default to same directory as input file
     }
 
 
     // pre-preprocessor step
-    std::string step0File = prePreprocess(argv[1], outputDir, useStdlib);
-    std::string step1File = preprocessStep2(step0File, outputDir);
+    str step0File = prePreprocess(argv[1], outputDir, useStdlib);
+    str step1File = preprocessStep2(step0File, outputDir);
     // preprocessor step
-    std::string preprocOutputFile = step1File;
+    str preprocOutputFile = step1File;
 
     preprocOutputFile = preprocOutputFile.substr(0, preprocOutputFile.size() - 2) + ".pp2"; // Change extension to .yapp.cpp for the preprocessed output
-    std::string preprocCommand = "clang -E ";
+    str preprocCommand = "clang -E ";
     for (const auto& arg : preprocArgs) {
         preprocCommand += "\"" + arg + "\" ";
     }
@@ -322,7 +333,7 @@ pub int main(vec<str> argv) {
         std::cerr << "Failed to open preprocessed file: " << preprocOutputFile << "\n";
         return 1;
     }
-    std::string line;
+    str line;
     std::ostringstream cleanedOutput;
     while (std::getline(preprocFile, line)) {
         if (line.empty() || line[0] != '#') {
@@ -376,13 +387,13 @@ pub int main(vec<str> argv) {
     clang_disposeIndex(index);
 
     // Post-process the header file if it was generated
-    std::string headerFile = std::filesystem::path(outputDir) / (filename + ".yapp.h");
+    str headerFile = std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.h");
     postProcess(headerFile);
 
     if (compileGenerated) {
         std::cout << "WARNING: Auto compiling generated files is not recommended. Use with caution." << std::endl;
-        std::string outdirfilename = std::filesystem::path(outputDir) / (filename + ".yapp.cpp");
-        std::string compileCommand = "clang++ \"" + outdirfilename + "\" ";
+        str outdirfilename = std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.cpp");
+        str compileCommand = "clang++ \"" + outdirfilename + "\" ";
         for (const auto& arg : compileArgs) {
             compileCommand += "\"" + arg + "\" ";
         }
@@ -399,11 +410,11 @@ pub int main(vec<str> argv) {
         std::remove(step0File.c_str());
 
         if ((!compileGenerated && sourceToggle) || (compileGenerated && !sourceToggle)) {
-            std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.cpp")).c_str());
+            std::remove((std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.cpp")).c_str());
         }
 
         if (removeHeader) {
-            std::remove((std::filesystem::path(outputDir) / (filename + ".yapp.h")).c_str());
+            std::remove((std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.h")).c_str());
         }
     }
 

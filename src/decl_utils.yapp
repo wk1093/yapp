@@ -5,10 +5,10 @@
 #import <algorithm>
 
 struct pub DeclInfo {
-    std::string name;
-    std::string usr;
-    std::string code;
-    std::string annotation;
+    str name;
+    str usr;
+    str code;
+    str annotation;
     bool isDefinition = false;
     bool isInline = false;
     bool isExternC = false;
@@ -20,8 +20,8 @@ struct pub DeclInfo {
     bool isUsingDec = false; // For using declarations
     CXCursorKind kind;
     int sourceOrderIndex = 0;
-    std::vector<std::string> namespaces;
-    std::string typeUsr;
+    vec<str> namespaces;
+    str typeUsr;
 };
 
 pub bool isExternC(CXCursor cursor) {
@@ -55,28 +55,28 @@ pub bool isAnonymousStruct(const DeclInfo& d) {
     return (d.kind == CXCursor_StructDecl) && d.name.empty();
 }
 
-pub std::string toStdString(CXString cxStr) {
-    std::string str = clang_getCString(cxStr);
+pub str toStdString(CXString cxStr) {
+    str str = clang_getCString(cxStr);
     clang_disposeString(cxStr);
     return str;
 }
 
-extern std::string GLOBAL_INPUT_FILE;
-extern std::string GLOBAL_SOURCE_FILE;
+extern str GLOBAL_INPUT_FILE;
+extern str GLOBAL_SOURCE_FILE;
 
-pub std::string createLineDirective(CXSourceLocation loc) {
+pub str createLineDirective(CXSourceLocation loc) {
     CXFile file;
     unsigned line, column, offset;
     clang_getFileLocation(loc, &file, &line, &column, &offset);
     CXString fileName = clang_getFileName(file);
-    std::string filePath = toStdString(fileName);
+    str filePath = toStdString(fileName);
     clang_disposeString(fileName);
     // replace input file with source file
     if (filePath == GLOBAL_INPUT_FILE) {
         filePath = GLOBAL_SOURCE_FILE;
     }
     // create a #line directive for the file and line number
-    std::string lineDirective = "\n#line " + std::to_string(line) + " \"" + filePath + "\"\n";
+    str lineDirective = "\n#line " + std::to_string(line) + " \"" + filePath + "\"\n";
 
     return lineDirective;
 }
@@ -89,7 +89,7 @@ pub bool isDifferentDirective(CXSourceLocation loc1, CXSourceLocation loc2) {
     return (file1 != file2 || line1 != line2);
 }
 
-pub std::string getSourceText(CXCursor cursor, CXTranslationUnit tu) {
+pub str getSourceText(CXCursor cursor, CXTranslationUnit tu) {
     CXSourceRange range = clang_getCursorExtent(cursor);
     CXToken* tokens = nullptr;
     unsigned numTokens = 0;
@@ -97,7 +97,7 @@ pub std::string getSourceText(CXCursor cursor, CXTranslationUnit tu) {
     CXSourceLocation loc = clang_getCursorLocation(cursor);
     // tokenize the range
     clang_tokenize(tu, range, &tokens, &numTokens);
-    std::string result = createLineDirective(loc);
+    str result = createLineDirective(loc);
     for (unsigned i = 0; i < numTokens; ++i) {
         CXSourceLocation tokenLoc = clang_getTokenLocation(tu, tokens[i]);
         if (isDifferentDirective(loc, tokenLoc)) {
@@ -111,12 +111,12 @@ pub std::string getSourceText(CXCursor cursor, CXTranslationUnit tu) {
     return result;
 }
 
-pub std::string getAnnotate(CXCursor cursor) {
-    std::string annotation = "";
+pub str getAnnotate(CXCursor cursor) {
+    str annotation = "";
     clang_visitChildren(cursor, [](CXCursor c, CXCursor, CXClientData data) {
         if (clang_getCursorKind(c) == CXCursor_AnnotateAttr) {
-            auto str = toStdString(clang_getCursorSpelling(c));
-            *static_cast<std::string*>(data) = str;
+            auto stri = toStdString(clang_getCursorSpelling(c));
+            *static_cast<str*>(data) = stri;
             return CXChildVisit_Break;
         }
         return CXChildVisit_Continue;
@@ -124,12 +124,12 @@ pub std::string getAnnotate(CXCursor cursor) {
     return annotation;
 }
 
-pub std::vector<std::string> getNamespaceChain(CXCursor cursor) {
-    std::vector<std::string> chain;
+pub vec<str> getNamespaceChain(CXCursor cursor) {
+    vec<str> chain;
     CXCursor parent = clang_getCursorSemanticParent(cursor);
     while (!clang_Cursor_isNull(parent) && clang_getCursorKind(parent) != CXCursor_TranslationUnit) {
         if (clang_getCursorKind(parent) == CXCursor_Namespace) {
-            std::string ns = toStdString(clang_getCursorSpelling(parent));
+            str ns = toStdString(clang_getCursorSpelling(parent));
             chain.push_back(ns);
         }
         parent = clang_getCursorSemanticParent(parent);
@@ -138,11 +138,11 @@ pub std::vector<std::string> getNamespaceChain(CXCursor cursor) {
     return chain;
 }
 
-pub std::string makeDeclaration(const std::string& code) {
-    std::string trimmed = code;
+pub str makeDeclaration(const str& code) {
+    str trimmed = code;
     trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
     size_t brace = trimmed.find('{');
-    if (brace != std::string::npos) {
+    if (brace != str::npos) {
         trimmed = trimmed.substr(0, brace);
     }
     if (trimmed.back() != ';') {

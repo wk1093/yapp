@@ -10,10 +10,10 @@
 #import visitor
 #import decl_utils
 
-priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& decls) {
+priv void emitWithNamespaces(std::ostream& out, const vec<DeclInfo>& decls) {
     out << "// Emitted by yappc\n";
     out << "// Emitting " << decls.size() << " declarations\n\n";
-    std::vector<std::string> currentNS;
+    vec<str> currentNS;
     bool inExternC = false;
     for (size_t idx = 0; idx < decls.size(); ++idx) {
         const auto& d = decls[idx];
@@ -67,9 +67,9 @@ priv void emitWithNamespaces(std::ostream& out, const std::vector<DeclInfo>& dec
 }
 
 // Helper: collect unique decls by USR
-priv std::vector<DeclInfo> collectUniqueDecls() {
-    std::vector<DeclInfo> seen;
-    std::unordered_map<std::string, size_t> usrToIndex;
+priv vec<DeclInfo> collectUniqueDecls() {
+    vec<DeclInfo> seen;
+    std::unordered_map<str, size_t> usrToIndex;
     for (auto& d : decls) {
         if (d.annotation.empty()) {
             std::cout << "Warning: Declaration without annotation for " << d.name << "\n";
@@ -131,12 +131,12 @@ priv bool isAnonymousType(const DeclInfo& d) {
     return false;
 }
 
-priv extern std::vector<std::string> preprocStored; // from main
-priv extern std::vector<std::string> usingStored; // from main
+priv extern vec<str> preprocStored; // from main
+priv extern vec<str> usingStored; // from main
 
 // Helper: collect public decls for header
-priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
-    std::vector<DeclInfo> pubDecls;
+priv vec<DeclInfo> collectHeaderDecls(const vec<DeclInfo>& seen) {
+    vec<DeclInfo> pubDecls;
     for (const auto& d : seen) {
         // if name startswith "__pub_preproc__", special case
         if (d.annotation == "pub" && d.name.find("__pub_preproc__") == 0) {
@@ -193,9 +193,9 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
                 // Do not emit extern for constexpr variables
                 if (!d.isConstexpr && !d.isExtern) {
                     // Remove initializer for extern declaration
-                    std::string code = d.code;
+                    str code = d.code;
                     size_t eq = code.find('=');
-                    if (eq != std::string::npos) code = code.substr(0, eq);
+                    if (eq != str::npos) code = code.substr(0, eq);
                     // Simple trim (left and right)
                     code.erase(0, code.find_first_not_of(" \t\n\r"));
                     code.erase(code.find_last_not_of(" \t\n\r") + 1);
@@ -213,14 +213,14 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
 }
 
 // Helper: collect source decls for cpp file
-priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen) {
-    std::unordered_map<std::string, bool> pubHasDefinition;
+priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
+    std::unordered_map<str, bool> pubHasDefinition;
     for (const auto& d : seen) {
         if (d.annotation == "pub" && d.isDefinition) {
             pubHasDefinition[d.name] = true;
         }
     }
-    std::vector<DeclInfo> sourceDecls;
+    vec<DeclInfo> sourceDecls;
     for (const auto& d : decls) {
         if (d.annotation.empty()) {
             const_cast<DeclInfo&>(d).annotation = "priv";
@@ -259,15 +259,15 @@ priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen)
                     }
                     ++end;
                 }
-                std::string params = d.code.substr(start + 1, end - start - 2);
-                if (parenCount == 0 && !params.empty() && params.find('=') != std::string::npos) {
+                str params = d.code.substr(start + 1, end - start - 2);
+                if (parenCount == 0 && !params.empty() && params.find('=') != str::npos) {
                     std::cout << "Removing default parameters from function: " << d.name << params << "\n";
                     // We found the end of the parameters
                     // Remove default parameters
                     size_t pos = params.find('=');
-                    while (pos != std::string::npos) {
+                    while (pos != str::npos) {
                         size_t nextComma = params.find(',', pos);
-                        if (nextComma == std::string::npos) {
+                        if (nextComma == str::npos) {
                             params.erase(pos);
                             break;
                         } else {
@@ -276,7 +276,7 @@ priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen)
                         pos = params.find('=', pos);
                     }
                     // Reconstruct the code with the modified parameters
-                    std::string newCode = d.code.substr(0, start + 1) + params + d.code.substr(end - 1);
+                    str newCode = d.code.substr(0, start + 1) + params + d.code.substr(end - 1);
                     const_cast<DeclInfo&>(d).code = newCode;
                 }
             }
@@ -290,9 +290,9 @@ priv std::vector<DeclInfo> collectSourceDecls(const std::vector<DeclInfo>& seen)
     return sourceDecls;
 }
 
-pub void writeFiles(const std::string& base, const std::string& dir) {
-    std::ofstream hfile(std::filesystem::path(dir) / (base + ".yapp.h"));
-    std::ofstream cppfile(std::filesystem::path(dir) / (base + ".yapp.cpp"));
+pub void writeFiles(const str& base, const str& dir) {
+    std::ofstream hfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.h"));
+    std::ofstream cppfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.cpp"));
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
     cppfile << "#include \"" << base << ".yapp.h\"\n\n";

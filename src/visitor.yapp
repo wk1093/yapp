@@ -5,10 +5,10 @@
 #import <cstring>
 #import decl_utils
 
-pub std::vector<DeclInfo> decls;
+pub vec<DeclInfo> decls;
 pub int orderCounter = 0;
-pub std::unordered_set<std::string> typedefBackedTags;
-pub std::vector<std::string> anonymousTypes;
+pub std::unordered_set<str> typedefBackedTags;
+pub vec<str> anonymousTypes;
 
 priv bool isTemplateType(CXCursorKind kind) {
     return (kind == CXCursor_ClassTemplate ||
@@ -26,7 +26,7 @@ priv bool hasConstexprKeyword(CXCursor cursor) {
     bool found = false;
     for (unsigned i = 0; i < numTokens; ++i) {
         CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
-        std::string tokenStr = clang_getCString(spelling);
+        str tokenStr = clang_getCString(spelling);
         clang_disposeString(spelling);
         // Check for 'constexpr' keyword
         if (tokenStr == "constexpr") {
@@ -55,7 +55,7 @@ priv bool hasTemplateKeyword(CXCursor cursor) {
     bool found = false;
     for (unsigned i = 0; i < numTokens; ++i) {
         CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
-        std::string tokenStr = clang_getCString(spelling);
+        str tokenStr = clang_getCString(spelling);
         clang_disposeString(spelling);
 
         if (tokenStr == "template") {
@@ -85,7 +85,7 @@ priv bool hasConstKeyword(CXCursor cursor) {
     bool found = false;
     for (unsigned i = 0; i < numTokens; ++i) {
         CXString spelling = clang_getTokenSpelling(tu, tokens[i]);
-        std::string tokenStr = clang_getCString(spelling);
+        str tokenStr = clang_getCString(spelling);
         clang_disposeString(spelling);
 
         if (tokenStr == "const") {
@@ -120,7 +120,7 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
             return CXChildVisit_Recurse;
         }
     }
-    std::string annotation = getAnnotate(cursor);
+    str annotation = getAnnotate(cursor);
     if (isUsingDec(cursor) && annotation.empty()) {
         annotation = "pub";
     }
@@ -230,9 +230,9 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
         clang_visitChildren(cursor, [](CXCursor c, CXCursor, CXClientData client_data) {
             auto kind = clang_getCursorKind(c);
             if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
-                std::string structName = toStdString(clang_getCursorUSR(c));
+                str structName = toStdString(clang_getCursorUSR(c));
                 if (!structName.empty()) {
-                    static_cast<std::unordered_set<std::string>*>(client_data)->insert(structName);
+                    static_cast<std::unordered_set<str>*>(client_data)->insert(structName);
                 }
             }
             return CXChildVisit_Continue;

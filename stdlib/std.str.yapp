@@ -2,6 +2,7 @@
 #import <sstream>
 #import <vector>
 #import <cstdarg>
+#import <filesystem>
 
 class pub str : public std::string {
 public:
@@ -11,12 +12,22 @@ public:
 
     static const size_t NotFound = std::string::npos;
     // Constructors
+    using std::string::string; // Inherit constructors from std::string
     str() : std::string() {}
     str(const std::string& s) : std::string(s) {}
     str(const char* s) : std::string(s) {}
     str(const char* s, size_t length) : std::string(s, length) {}
     str(const str& other) : std::string(other) {}
     str(str&& other) noexcept : std::string(std::move(other)) {}
+    str(const std::filesystem::path& p) : std::string(p.string()) {}
+    pub str& operator=(const str& other) {
+        std::string::operator=(other);
+        return *this;
+    }
+
+    pub std::string stdstr() const {
+        return *this;
+    }
 
     pub bool endsWith(const str& suffix) const {
         if (suffix.length() > this->length()) return false;
@@ -78,7 +89,12 @@ public:
     }
 
     
-}
+};
+
+#using template<> pub struct std::hash<str> { size_t operator()(const str& s) const noexcept { return std::hash<std::string>()(s); }};
+
+
+
 
 // strings can handle binary data, this is just for clarity
 using bytestr = str;
