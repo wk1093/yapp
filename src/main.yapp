@@ -18,7 +18,6 @@ pub vec<str> usingStored;
 pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
     file::reader in(inputFile);
     if (!in) {
-        // std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
         io::println(io::err, "Failed to open input file for pre-preprocessing: ", inputFile);
         exit(1);
     }
@@ -75,7 +74,7 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
     str outFile = std::filesystem::path(outputDir.stdstr()) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
     file::writer p0f(outFile);
     if (!p0f) {
-        std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
+        io::println(io::err, "Failed to write pre-preprocessed file: ", outFile);
         exit(1);
     }
     p0f << out.str();
@@ -86,7 +85,7 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
 pub str preprocessStep2(const str& p0File, const str& outputDir) {
     file::reader in(p0File);
     if (!in) {
-        std::cerr << "Failed to open pre-preprocessed file for second preprocessing: " << p0File << "\n";
+        io::println(io::err, "Failed to open pre-preprocessed file for second preprocessing: ", p0File);
         exit(1);
     }
     str::writer out;
@@ -128,7 +127,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
     str outFile = std::filesystem::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
     file::writer p1f(outFile);
     if (!p1f) {
-        std::cerr << "Failed to write second preprocessed file: " << outFile << "\n";
+        io::println(io::err, "Failed to write second preprocessed file: ", outFile);
         exit(1);
     }
     p1f << out.str();
@@ -139,7 +138,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
 pub void postProcess(const str& headerFile) {
     file::reader in(headerFile);
     if (!in) {
-        std::cerr << "Failed to open input header file for post-processing: " << headerFile << "\n";
+        io::println(io::err, "Failed to open input header file for post-processing: ", headerFile);
         exit(1);
     }
     str::writer out;
@@ -150,9 +149,9 @@ pub void postProcess(const str& headerFile) {
         if (std::regex_search(line, m, usingAliasRegex)) {
             // We found a using alias declaration
             // We need to replace it with the actual using alias from usingStored
-            int index = std::stoi(m[1].str());
+            int index = str::toInt(m[1].str());
             if (index < 0 || index >= usingStored.size()) {
-                std::cerr << "Error: Using alias index out of bounds: " << index << "\n";
+                io::println(io::err, "Error: Using alias index out of bounds: ", index);
                 exit(1);
             }
             out << usingStored[index] << "\n"; // Replace with the actual using alias
@@ -165,7 +164,7 @@ pub void postProcess(const str& headerFile) {
 
     file::writer outFileStream(headerFile);
     if (!outFileStream) {
-        std::cerr << "Failed to write post-processed header file: " << headerFile << "\n";
+        io::println(io::err, "Failed to write post-processed header file: ", headerFile);
         exit(1);
     }
     outFileStream << out.str();
@@ -196,7 +195,7 @@ str GLOBAL_INPUT_FILE;
 pub int main(vec<str> argv) {
     int argc = argv.size();
     if (argc < 2) {
-        std::cerr << "Usage: ./yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]\n";
+        io::println(io::err, "Usage: ./yappc <source.yapp> [OPTIONS] -- [Preprocessor Args] -- [Compiler Args]");
         return 1;
     }
 
@@ -234,25 +233,25 @@ pub int main(vec<str> argv) {
             debugMode = true;
         }
         if (arg == "-h") {
-            std::cout << usageString;
+            io::print(usageString);
             return 0;
         }
         if (arg == "-o") {
             // Handle output directory option
             if (i + 1 >= myArgs.size()) {
                 // If -o is the last argument, we can't set an output directory
-                std::cerr << "Error: -o option requires an argument.\n";
+                io::println(io::err, "Error: -o option requires a directory argument.");
                 return 1; 
             } else if (myArgs[i + 1][0] == '-') {
                 // If the next argument is another option, we can't set an output directory
-                std::cerr << "Error: -o option requires a directory argument.\n";
+                io::println(io::err, "Error: -o option requires a directory argument.");
                 return 1;
             } else {
                 outputDir = myArgs[i + 1];
                 i++; // Skip the next argument since it's the directory
                 std::filesystem::path dirPath(outputDir.stdstr());
                 if (!std::filesystem::exists(dirPath)) {
-                    std::cerr << "Warning: Specified output directory does not exist. Creating: " << outputDir << "\n";
+                    io::println(io::err, "Warning: Specified output directory does not exist. Creating: ", outputDir);
                     std::filesystem::create_directories(dirPath);
                 }
             }
@@ -297,13 +296,13 @@ pub int main(vec<str> argv) {
     preprocCommand += "-D__yaplusplus ";
     preprocCommand += "-x c++ \"" + step1File + "\" > \"" + preprocOutputFile + "\"";
     if (system(preprocCommand.c_str()) != 0) {
-        std::cerr << "Preprocessing failed.\n";
+        io::println(io::err, "Preprocessing failed. Check the preprocessor arguments and input file.");
         return 1;
     }
 
     file::reader preprocFile(preprocOutputFile);
     if (!preprocFile) {
-        std::cerr << "Failed to open preprocessed file: " << preprocOutputFile << "\n";
+        io::println(io::err, "Failed to open preprocessed file: ", preprocOutputFile);
         return 1;
     }
     str line;
@@ -316,7 +315,7 @@ pub int main(vec<str> argv) {
     preprocFile.close();
     file::writer cleanedFile(preprocOutputFile);
     if (!cleanedFile) {
-        std::cerr << "Failed to write cleaned preprocessed file: " << preprocOutputFile << "\n";
+        io::println(io::err, "Failed to write cleaned preprocessed file: ", preprocOutputFile);
         return 1;
     }
     cleanedFile << cleanedOutput.str();
@@ -342,13 +341,13 @@ pub int main(vec<str> argv) {
             for (unsigned i=0; i < numErrors; ++i) {
                 CXDiagnostic diag = clang_getDiagnostic(tu, i);
                 CXString str = clang_formatDiagnostic(diag, displayOptions);
-                std::cerr << clang_getCString(str) << "\n";
+                io::println(io::err, clang_getCString(str));
                 clang_disposeString(str);
                 clang_disposeDiagnostic(diag);
             }
             return 2;
         }
-        std::cerr << "Failed to parse input file.\n";
+        io::println(io::err, "Failed to parse input file: ", preprocOutputFile);
         return 1;
     }
 
@@ -364,14 +363,14 @@ pub int main(vec<str> argv) {
     postProcess(headerFile);
 
     if (compileGenerated) {
-        std::cout << "WARNING: Auto compiling generated files is not recommended. Use with caution." << std::endl;
+        io::println("WARNING: Auto compiling generated files is not recommended. Use with caution.");
         str outdirfilename = std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.cpp");
         str compileCommand = "clang++ \"" + outdirfilename + "\" ";
         for (const auto& arg : compileArgs) {
             compileCommand += "\"" + arg + "\" ";
         }
         if (system(compileCommand.c_str()) != 0) {
-            std::cerr << "Compilation failed.\n";
+            io::println(io::err, "Compilation failed.");
             return 1;
         }
     }

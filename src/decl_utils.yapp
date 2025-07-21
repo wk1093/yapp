@@ -76,7 +76,7 @@ pub str createLineDirective(CXSourceLocation loc) {
         filePath = GLOBAL_SOURCE_FILE;
     }
     // create a #line directive for the file and line number
-    str lineDirective = "\n#line " + std::to_string(line) + " \"" + filePath + "\"\n";
+    str lineDirective = "\n#line " + str::from(line) + " \"" + filePath + "\"\n";
 
     return lineDirective;
 }

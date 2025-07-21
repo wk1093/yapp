@@ -74,7 +74,7 @@ priv vec<DeclInfo> collectUniqueDecls() {
     std::unordered_map<str, size_t> usrToIndex;
     for (auto& d : decls) {
         if (d.annotation.empty()) {
-            std::cout << "Warning: Declaration without annotation for " << d.name << "\n";
+            io::println("Warning: Declaration without annotation for ", d.name);
             d.annotation = "priv";
         }
         auto it = usrToIndex.find(d.usr);
@@ -126,8 +126,7 @@ priv bool isAnonymousType(const DeclInfo& d) {
         return false;
     }
     // Check if the type is an anonymous struct/union/enum
-    if (std::find(anonymousTypes.begin(), anonymousTypes.end(), d.typeUsr)
-        != anonymousTypes.end()) {
+    if (anonymousTypes.contains(d.typeUsr)) {
         return true;
     }
     return false;
@@ -145,9 +144,9 @@ priv vec<DeclInfo> collectHeaderDecls(const vec<DeclInfo>& seen) {
             // Special case for preprocessor annotations
             // name should be "__pub_preproc__<index>"
             // we need to find the index
-            size_t index = std::stoul(d.name.substr(strlen("__pub_preproc__")));
+            size_t index = str::toul(d.name.substr(strlen("__pub_preproc__")));
             if (index >= preprocStored.size()) {
-                std::cerr << "Warning: __pub_preproc__ index out of bounds: " << index << "\n";
+                io::println(io::err, "Warning: __pub_preproc__ index out of bounds: ", index);
                 continue;
             }
             DeclInfo copy = d;
@@ -158,9 +157,9 @@ priv vec<DeclInfo> collectHeaderDecls(const vec<DeclInfo>& seen) {
         if (d.annotation == "pub" && d.name.find("__pub_using_alias__") == 0) {
             // Special case for using aliases
             // name should be "__pub_using_alias__<index>"
-            size_t index = std::stoul(d.name.substr(strlen("__pub_using_alias__")));
+            size_t index = str::toul(d.name.substr(strlen("__pub_using_alias__")));
             if (index >= usingStored.size()) {
-                std::cerr << "Warning: __pub_using_alias__ index out of bounds: " << index << "\n";
+                io::println(io::err, "Warning: __pub_using_alias__ index out of bounds: ", index);
                 continue;
             }
             DeclInfo copy = d;
@@ -263,7 +262,7 @@ priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
                 }
                 str params = d.code.substr(start + 1, end - start - 2);
                 if (parenCount == 0 && !params.empty() && params.find('=') != str::npos) {
-                    std::cout << "Removing default parameters from function: " << d.name << params << "\n";
+                    
                     // We found the end of the parameters
                     // Remove default parameters
                     size_t pos = params.find('=');

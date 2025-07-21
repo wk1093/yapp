@@ -76,6 +76,11 @@ public:
     }
 
     template<typename T>
+    pub static str from(const T& value) {
+        return toString(value);
+    }
+
+    template<typename T>
     pub static str join(const std::vector<T>& items, const str& delimiter = ", ") {
         if (items.empty()) return str();
         writer ss;
@@ -86,6 +91,48 @@ public:
             }
         }
         return str(ss.str());
+    }
+
+    pub static int toInt(const str& s, int base = 10) {
+        try {
+            return std::stoi(s.stdstr(), nullptr, base);
+        } catch (const std::invalid_argument&) {
+            throw std::runtime_error("Invalid integer conversion from string: " + s.stdstr());
+        } catch (const std::out_of_range&) {
+            throw std::runtime_error("Integer conversion out of range for string: " + s.stdstr());
+        }
+    }
+
+    pub static int toi(const str& s, int base = 10) {
+        return toInt(s, base);
+    }
+
+    pub static long toLong(const str& s, int base = 10) {
+        try {
+            return std::stol(s.stdstr(), nullptr, base);
+        } catch (const std::invalid_argument&) {
+            throw std::runtime_error("Invalid long conversion from string: " + s.stdstr());
+        } catch (const std::out_of_range&) {
+            throw std::runtime_error("Long conversion out of range for string: " + s.stdstr());
+        }
+    }
+
+    pub static long tol(const str& s, int base = 10) {
+        return toLong(s, base);
+    }
+
+    pub static unsigned long toUnsignedLong(const str& s, int base = 10) {
+        try {
+            return std::stoul(s.stdstr(), nullptr, base);
+        } catch (const std::invalid_argument&) {
+            throw std::runtime_error("Invalid unsigned long conversion from string: " + s.stdstr());
+        } catch (const std::out_of_range&) {
+            throw std::runtime_error("Unsigned long conversion out of range for string: " + s.stdstr());
+        }
+    }
+
+    pub static unsigned long toul(const str& s, int base = 10) {
+        return toUnsignedLong(s, base);
     }
 
     
