@@ -16,17 +16,17 @@ pub vec<str> preprocStored;
 pub vec<str> usingStored;
 
 pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
-    std::ifstream in(inputFile);
+    file::reader in(inputFile);
     if (!in) {
         // std::cerr << "Failed to open input file for pre-preprocessing: " << inputFile << "\n";
         io::println(io::err, "Failed to open input file for pre-preprocessing: ", inputFile);
         exit(1);
     }
-    std::ostringstream out;
+    str::writer out;
     str line;
 
     if (stdlib) {
-        preprocStored.push_back("include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n");
+        preprocStored.push_back("include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n#include \"std.stream.yapp.h\"\n");
         out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();";
     }
     
@@ -73,7 +73,7 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
         }
     }
     str outFile = std::filesystem::path(outputDir.stdstr()) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
-    std::ofstream p0f(outFile);
+    file::writer p0f(outFile);
     if (!p0f) {
         std::cerr << "Failed to write pre-preprocessed file: " << outFile << "\n";
         exit(1);
@@ -84,12 +84,12 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
 }
 
 pub str preprocessStep2(const str& p0File, const str& outputDir) {
-    std::ifstream in(p0File);
+    file::reader in(p0File);
     if (!in) {
         std::cerr << "Failed to open pre-preprocessed file for second preprocessing: " << p0File << "\n";
         exit(1);
     }
-    std::ostringstream out;
+    str::writer out;
     str line;
 
     // also doesn't need to be at the start of the line
@@ -126,7 +126,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
         }
     }
     str outFile = std::filesystem::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
-    std::ofstream p1f(outFile);
+    file::writer p1f(outFile);
     if (!p1f) {
         std::cerr << "Failed to write second preprocessed file: " << outFile << "\n";
         exit(1);
@@ -137,12 +137,12 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
 }
 
 pub void postProcess(const str& headerFile) {
-    std::ifstream in(headerFile);
+    file::reader in(headerFile);
     if (!in) {
         std::cerr << "Failed to open input header file for post-processing: " << headerFile << "\n";
         exit(1);
     }
-    std::ostringstream out;
+    str::writer out;
     str line;
     std::regex usingAliasRegex(R"(__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"pub"\s*\)\s*\)\s*\)\s*__attribute__\s*\(\s*\(\s*annotate\s*\(\s*"__pub_using_alias__"\s*\)\s*\)\s*\)\s*void\s+__pub_using_alias__(\d+)\s*\(\s*\)\s*;)");
     while (std::getline(in, line)) {
@@ -163,7 +163,7 @@ pub void postProcess(const str& headerFile) {
 
     in.close();
 
-    std::ofstream outFileStream(headerFile);
+    file::writer outFileStream(headerFile);
     if (!outFileStream) {
         std::cerr << "Failed to write post-processed header file: " << headerFile << "\n";
         exit(1);
@@ -328,20 +328,20 @@ pub int main(vec<str> argv) {
         return 1;
     }
 
-    std::ifstream preprocFile(preprocOutputFile);
+    file::reader preprocFile(preprocOutputFile);
     if (!preprocFile) {
         std::cerr << "Failed to open preprocessed file: " << preprocOutputFile << "\n";
         return 1;
     }
     str line;
-    std::ostringstream cleanedOutput;
+    str::writer cleanedOutput;
     while (std::getline(preprocFile, line)) {
         if (line.empty() || line[0] != '#') {
             cleanedOutput << line << "\n";
         }
     }
     preprocFile.close();
-    std::ofstream cleanedFile(preprocOutputFile);
+    file::writer cleanedFile(preprocOutputFile);
     if (!cleanedFile) {
         std::cerr << "Failed to write cleaned preprocessed file: " << preprocOutputFile << "\n";
         return 1;

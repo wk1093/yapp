@@ -34,7 +34,7 @@ std :: string line ;
 #line 24 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 if ( stdlib ) { 
 #line 25 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-preprocStored . push_back ( "include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n" ) ; 
+preprocStored . push_back ( "include \"std.main.yapp.h\"\n#include \"std.str.yapp.h\"\n#include \"std.vec.yapp.h\"\n#include \"std.result.yapp.h\"\n#include \"std.stream.yapp.h\"\n" ) ; 
 #line 26 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 out << "pub __attribute__((annotate(\"__pub_preproc__\"))) void __pub_preproc__0();" ; 
 #line 27 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"

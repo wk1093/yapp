@@ -1,0 +1,7 @@
+#import <iostream>
+
+namespace stream {
+    using reader = std::istream;
+    using writer = std::ostream;
+    using stream = std::iostream;
+}

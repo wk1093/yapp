@@ -1,3 +1,5 @@
+#import std.io
+
 #import <clang-c/Index.h>
 #import <cstring>
 #import <filesystem>
@@ -10,7 +12,7 @@
 #import visitor
 #import decl_utils
 
-priv void emitWithNamespaces(std::ostream& out, const vec<DeclInfo>& decls) {
+priv void emitWithNamespaces(stream::writer& out, const vec<DeclInfo>& decls) {
     out << "// Emitted by yappc\n";
     out << "// Emitting " << decls.size() << " declarations\n\n";
     vec<str> currentNS;
@@ -291,8 +293,8 @@ priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
 }
 
 pub void writeFiles(const str& base, const str& dir) {
-    std::ofstream hfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.h"));
-    std::ofstream cppfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.cpp"));
+    file::writer hfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.h"));
+    file::writer cppfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.cpp"));
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
     cppfile << "#include \"" << base << ".yapp.h\"\n\n";
