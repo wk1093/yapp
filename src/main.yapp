@@ -10,6 +10,7 @@
 #import <regex>
 
 pub std::vector<std::string> preprocStored;
+pub std::vector<std::string> usingStored;
 
 pub std::string prePreprocess(const std::string& inputFile, const std::string& outputDir, bool stdlib) {
     std::ifstream in(inputFile);
@@ -82,6 +83,7 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
 
     // also doesn't need to be at the start of the line
     std::regex usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
+    std::regex usingAliasFix(R"((pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_:]*)\s*;)");
     // with the custom import system, sometimes clang will remove using directives because "the namespace doesn't exist"
     // but we need to keep them
     while (std::getline(in, line)) {
@@ -101,6 +103,13 @@ pub std::string preprocessStep2(const std::string& p0File, const std::string& ou
             } else {
                 out << attr << " using namespace " << namespaceName << ";\n";
             }
+        } else if (std::regex_search(line, m, usingAliasFix)) {
+            // For some reason libclang like to just remove using aliases sometimes, so we will just add them back at the end
+
+            // This is very similar to the pub preproc where it is a fake function declaration
+            out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
+            
+            usingStored.push_back(m[0].str());
         } else {
             out << line << "\n";
         }

@@ -131,7 +131,8 @@ priv bool isAnonymousType(const DeclInfo& d) {
     return false;
 }
 
-priv extern std::vector<std::string> preprocStored; // from main.cpp
+priv extern std::vector<std::string> preprocStored; // from main
+priv extern std::vector<std::string> usingStored; // from main
 
 // Helper: collect public decls for header
 priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen) {
@@ -149,6 +150,19 @@ priv std::vector<DeclInfo> collectHeaderDecls(const std::vector<DeclInfo>& seen)
             }
             DeclInfo copy = d;
             copy.code = "#"+preprocStored[index]+"\n";
+            pubDecls.push_back(copy);
+            continue;
+        }
+        if (d.annotation == "pub" && d.name.find("__pub_using_alias__") == 0) {
+            // Special case for using aliases
+            // name should be "__pub_using_alias__<index>"
+            size_t index = std::stoul(d.name.substr(strlen("__pub_using_alias__")));
+            if (index >= usingStored.size()) {
+                std::cerr << "Warning: __pub_using_alias__ index out of bounds: " << index << "\n";
+                continue;
+            }
+            DeclInfo copy = d;
+            copy.code = usingStored[index] + "\n";
             pubDecls.push_back(copy);
             continue;
         }

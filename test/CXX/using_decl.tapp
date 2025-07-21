@@ -26,7 +26,7 @@ pub using namespace std;
 @c "using namespace" in h
 @c "using namespace" not in c
 
-#import io
+#import std.io
 
 using namespace io;
 
@@ -34,7 +34,7 @@ using namespace io;
 @c "using namespace" not in h
 @c "using namespace" in c
 
-#import io
+#import std.io
 
 priv using namespace io;
 
@@ -42,6 +42,12 @@ priv using namespace io;
 @c "using namespace" in h
 @c "using namespace" not in c
 
-#import io
+#import std.io
 
 pub using namespace io;
+
+@test check
+@c "using x = str" in h
+@c "using x = str" not in c
+
+using x = str;
