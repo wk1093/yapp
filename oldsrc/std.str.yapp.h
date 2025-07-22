@@ -150,28 +150,108 @@ return str ( ss . str ( ) ) ;
 #line 78 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
 template < typename T > 
 #line 79 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-__attribute__ ( ( annotate ( "pub" ) ) ) static str join ( const std :: vector < T > & items , const str & delimiter = ", " ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) static str from ( const T & value ) { 
 #line 80 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-if ( items . empty ( ) ) return str ( ) ; 
+return toString ( value ) ; 
 #line 81 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-writer ss ; 
-#line 82 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-for ( size_t i = 0 ; i < items . size ( ) ; ++ i ) { 
+} 
 #line 83 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-ss << items [ i ] ; 
+template < typename T > 
 #line 84 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-if ( i < items . size ( ) - 1 ) { 
+__attribute__ ( ( annotate ( "pub" ) ) ) static str join ( const std :: vector < T > & items , const str & delimiter = ", " ) { 
 #line 85 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-ss << delimiter ; 
+if ( items . empty ( ) ) return str ( ) ; 
 #line 86 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-} 
+writer ss ; 
 #line 87 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-} 
+for ( size_t i = 0 ; i < items . size ( ) ; ++ i ) { 
 #line 88 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
-return str ( ss . str ( ) ) ; 
+ss << items [ i ] ; 
 #line 89 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+if ( i < items . size ( ) - 1 ) { 
+#line 90 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+ss << delimiter ; 
+#line 91 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
 } 
 #line 92 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 93 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return str ( ss . str ( ) ) ; 
+#line 94 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 96 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static int toInt ( const str & s , int base = 10 ) { 
+#line 97 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+try { 
+#line 98 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return std :: stoi ( s . stdstr ( ) , nullptr , base ) ; 
+#line 99 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: invalid_argument & ) { 
+#line 100 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Invalid integer conversion from string: " + s . stdstr ( ) ) ; 
+#line 101 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: out_of_range & ) { 
+#line 102 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Integer conversion out of range for string: " + s . stdstr ( ) ) ; 
+#line 103 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 104 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 106 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static int toi ( const str & s , int base = 10 ) { 
+#line 107 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return toInt ( s , base ) ; 
+#line 108 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 110 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static long toLong ( const str & s , int base = 10 ) { 
+#line 111 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+try { 
+#line 112 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return std :: stol ( s . stdstr ( ) , nullptr , base ) ; 
+#line 113 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: invalid_argument & ) { 
+#line 114 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Invalid long conversion from string: " + s . stdstr ( ) ) ; 
+#line 115 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: out_of_range & ) { 
+#line 116 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Long conversion out of range for string: " + s . stdstr ( ) ) ; 
+#line 117 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 118 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 120 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static long tol ( const str & s , int base = 10 ) { 
+#line 121 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return toLong ( s , base ) ; 
+#line 122 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 124 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static unsigned long toUnsignedLong ( const str & s , int base = 10 ) { 
+#line 125 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+try { 
+#line 126 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return std :: stoul ( s . stdstr ( ) , nullptr , base ) ; 
+#line 127 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: invalid_argument & ) { 
+#line 128 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Invalid unsigned long conversion from string: " + s . stdstr ( ) ) ; 
+#line 129 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} catch ( const std :: out_of_range & ) { 
+#line 130 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+throw std :: runtime_error ( "Unsigned long conversion out of range for string: " + s . stdstr ( ) ) ; 
+#line 131 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 132 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 134 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+__attribute__ ( ( annotate ( "pub" ) ) ) static unsigned long toul ( const str & s , int base = 10 ) { 
+#line 135 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+return toUnsignedLong ( s , base ) ; 
+#line 136 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
+} 
+#line 139 "/home/wyatt/dev/cpp/pubprivattr/stdlib/std.str.yapp"
 } ;
 
 template<> pub struct std::hash<str> { size_t operator()(const str& s) const noexcept { return std::hash<std::string>()(s); }};

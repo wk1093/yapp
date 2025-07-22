@@ -59,7 +59,7 @@ __attribute__ ( ( annotate ( "pub" ) ) ) vec < str > usingStored;
 __attribute__ ( ( annotate ( "pub" ) ) ) str prePreprocess ( const str & inputFile , const str & outputDir , bool stdlib ) ;;
 
 
-#line 86 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
+#line 85 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 __attribute__ ( ( annotate ( "pub" ) ) ) str preprocessStep2 ( const str & p0File , const str & outputDir ) ;;
 
 

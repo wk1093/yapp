@@ -1,4 +1,5 @@
 #import std.io
+#import std.map
 
 #import <clang-c/Index.h>
 #import <cstring>
@@ -71,7 +72,7 @@ priv void emitWithNamespaces(stream::writer& out, const vec<DeclInfo>& decls) {
 // Helper: collect unique decls by USR
 priv vec<DeclInfo> collectUniqueDecls() {
     vec<DeclInfo> seen;
-    std::unordered_map<str, size_t> usrToIndex;
+    map::hash<str, size_t> usrToIndex;
     for (auto& d : decls) {
         if (d.annotation.empty()) {
             io::println("Warning: Declaration without annotation for ", d.name);
@@ -215,7 +216,7 @@ priv vec<DeclInfo> collectHeaderDecls(const vec<DeclInfo>& seen) {
 
 // Helper: collect source decls for cpp file
 priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
-    std::unordered_map<str, bool> pubHasDefinition;
+    map::hash<str, bool> pubHasDefinition;
     for (const auto& d : seen) {
         if (d.annotation == "pub" && d.isDefinition) {
             pubHasDefinition[d.name] = true;

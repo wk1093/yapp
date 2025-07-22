@@ -116,7 +116,7 @@ for ( auto & d : decls ) {
 #line 76 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation . empty ( ) ) { 
 #line 77 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-std :: cout << "Warning: Declaration without annotation for " << d . name << "\n" ; 
+io :: println ( "Warning: Declaration without annotation for " , d . name ) ; 
 #line 78 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 d . annotation = "priv" ; 
 #line 79 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
@@ -208,320 +208,316 @@ return false ;
 #line 127 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
 #line 129 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-if ( std :: find ( anonymousTypes . begin ( ) , anonymousTypes . end ( ) , d . typeUsr ) 
+if ( anonymousTypes . contains ( d . typeUsr ) ) { 
 #line 130 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-!= anonymousTypes . end ( ) ) { 
-#line 131 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return true ; 
-#line 132 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 131 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 133 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 132 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return false ; 
-#line 134 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 133 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ;
 
 
-#line 136 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 135 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "priv" ) ) ) extern vec < str > preprocStored ;
 
 
-#line 137 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 136 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "priv" ) ) ) extern vec < str > usingStored ;
 
 
-#line 140 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 139 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "priv" ) ) ) vec < DeclInfo > collectHeaderDecls ( const vec < DeclInfo > & seen ) { 
-#line 141 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 140 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 vec < DeclInfo > pubDecls ; 
-#line 142 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 141 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 for ( const auto & d : seen ) { 
-#line 144 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 143 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation == "pub" && d . name . find ( "__pub_preproc__" ) == 0 ) { 
+#line 147 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+size_t index = str :: toul ( d . name . substr ( strlen ( "__pub_preproc__" ) ) ) ; 
 #line 148 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-size_t index = std :: stoul ( d . name . substr ( strlen ( "__pub_preproc__" ) ) ) ; 
-#line 149 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( index >= preprocStored . size ( ) ) { 
+#line 149 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+io :: println ( io :: err , "Warning: __pub_preproc__ index out of bounds: " , index ) ; 
 #line 150 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-std :: cerr << "Warning: __pub_preproc__ index out of bounds: " << index << "\n" ; 
+continue ; 
 #line 151 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 152 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
+DeclInfo copy = d ; 
 #line 153 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-DeclInfo copy = d ; 
-#line 154 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 copy . code = "#" + preprocStored [ index ] + "\n" ; 
+#line 154 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+pubDecls . push_back ( copy ) ; 
 #line 155 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-pubDecls . push_back ( copy ) ; 
+continue ; 
 #line 156 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 157 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 158 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation == "pub" && d . name . find ( "__pub_using_alias__" ) == 0 ) { 
+#line 160 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+size_t index = str :: toul ( d . name . substr ( strlen ( "__pub_using_alias__" ) ) ) ; 
 #line 161 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-size_t index = std :: stoul ( d . name . substr ( strlen ( "__pub_using_alias__" ) ) ) ; 
-#line 162 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( index >= usingStored . size ( ) ) { 
+#line 162 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+io :: println ( io :: err , "Warning: __pub_using_alias__ index out of bounds: " , index ) ; 
 #line 163 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-std :: cerr << "Warning: __pub_using_alias__ index out of bounds: " << index << "\n" ; 
+continue ; 
 #line 164 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 165 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
+DeclInfo copy = d ; 
 #line 166 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-DeclInfo copy = d ; 
-#line 167 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 copy . code = usingStored [ index ] + "\n" ; 
-#line 168 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 167 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 pubDecls . push_back ( copy ) ; 
+#line 168 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+continue ; 
 #line 169 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 170 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 171 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . isStatic && ! d . isUsingDec ) continue ; 
-#line 172 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 171 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation == "pub" ) { 
-#line 173 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 172 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( isAnonymousStruct ( d ) ) { 
+#line 173 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+continue ; 
 #line 174 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 175 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 176 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ( ( d . kind == CXCursor_StructDecl || 
-#line 177 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 176 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 d . kind == CXCursor_UnionDecl || 
-#line 178 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 177 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 d . kind == CXCursor_EnumDecl ) && 
-#line 179 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 178 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 typedefBackedTags . count ( d . usr ) ) && ! d . isUsingDec ) 
-#line 180 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 179 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 { 
+#line 180 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+continue ; 
 #line 181 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
+} 
 #line 182 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 183 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 DeclInfo copy = d ; 
-#line 185 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 184 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ! d . isTemplate && ! d . isConstexpr && d . isDefinition && ! d . isInline && 
-#line 186 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 185 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 ( d . kind == CXCursor_FunctionDecl || d . kind == CXCursor_CXXMethod ) ) { 
-#line 187 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 186 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 copy . code = makeDeclaration ( d . code ) ; 
-#line 188 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 187 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 190 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 189 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( isGlobalVariable ( d ) && ! d . isUsingDec ) { 
-#line 191 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 190 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( isAnonymousType ( d ) ) { 
-#line 193 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 192 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 continue ; 
-#line 194 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 193 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 196 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 195 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ! d . isConstexpr && ! d . isExtern ) { 
-#line 198 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 197 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 str code = d . code ; 
-#line 199 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 198 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 size_t eq = code . find ( '=' ) ; 
-#line 200 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 199 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( eq != str :: npos ) code = code . substr ( 0 , eq ) ; 
-#line 202 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 201 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 code . erase ( 0 , code . find_first_not_of ( " \t\n\r" ) ) ; 
-#line 203 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 202 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 code . erase ( code . find_last_not_of ( " \t\n\r" ) + 1 ) ; 
-#line 204 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 203 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ! code . empty ( ) && code . back ( ) == ';' ) code . pop_back ( ) ; 
-#line 205 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 204 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 copy . code = "extern \n" + code ; 
+#line 205 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 206 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
 #line 207 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 208 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 pubDecls . push_back ( copy ) ; 
+#line 208 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 209 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
 #line 210 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 211 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 std :: sort ( pubDecls . begin ( ) , pubDecls . end ( ) , [ ] ( const DeclInfo & a , const DeclInfo & b ) { 
-#line 212 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 211 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return a . sourceOrderIndex < b . sourceOrderIndex ; 
-#line 213 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 212 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ) ; 
-#line 214 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 213 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return pubDecls ; 
-#line 215 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 214 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ;
 
 
-#line 218 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 217 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "priv" ) ) ) vec < DeclInfo > collectSourceDecls ( const vec < DeclInfo > & seen ) { 
-#line 219 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 218 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 std :: unordered_map < str , bool > pubHasDefinition ; 
-#line 220 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 219 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 for ( const auto & d : seen ) { 
-#line 221 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 220 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation == "pub" && d . isDefinition ) { 
-#line 222 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 221 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 pubHasDefinition [ d . name ] = true ; 
+#line 222 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 223 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
 #line 224 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 225 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 vec < DeclInfo > sourceDecls ; 
-#line 226 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 225 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 for ( const auto & d : decls ) { 
-#line 227 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 226 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation . empty ( ) ) { 
-#line 228 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 227 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 const_cast < DeclInfo & > ( d ) . annotation = "priv" ; 
+#line 228 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 229 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 230 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . kind == CXCursor_TypedefDecl || d . kind == CXCursor_TypeAliasDecl || 
-#line 231 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 230 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 d . kind == CXCursor_StructDecl || d . kind == CXCursor_EnumDecl || 
-#line 232 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 231 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 d . kind == CXCursor_UnionDecl || d . kind == CXCursor_ClassDecl ) { 
+#line 232 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+continue ; 
 #line 233 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-continue ; 
-#line 234 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 237 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 236 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( isAnonymousStruct ( d ) ) continue ; 
-#line 239 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 238 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( isGlobalVariable ( d ) && d . annotation == "priv" ) { 
-#line 240 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 239 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 sourceDecls . push_back ( d ) ; 
-#line 241 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 240 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 continue ; 
+#line 241 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 242 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 243 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . annotation == "pub" ) { 
-#line 244 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 243 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . isTemplate ) continue ; 
-#line 245 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 244 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . isConstexpr ) continue ; 
-#line 247 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 246 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ! d . isDefinition && pubHasDefinition [ d . name ] ) continue ; 
-#line 248 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 247 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . isInline ) continue ; 
-#line 249 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 248 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( ! d . isDefinition ) continue ; 
-#line 250 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 249 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . kind == CXCursor_FunctionDecl || d . kind == CXCursor_CXXMethod ) { 
-#line 253 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 252 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 size_t start = d . code . find ( '(' , d . code . find ( d . name ) ) ; 
-#line 254 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 253 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 int parenCount = 1 ; 
-#line 255 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 254 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 size_t end = start + 1 ; 
-#line 256 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 255 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 while ( end < d . code . size ( ) && parenCount > 0 ) { 
-#line 257 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 256 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( d . code [ end ] == '(' ) { 
-#line 258 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 257 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 ++ parenCount ; 
-#line 259 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 258 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } else if ( d . code [ end ] == ')' ) { 
-#line 260 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 259 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 -- parenCount ; 
+#line 260 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 261 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 262 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 ++ end ; 
+#line 262 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 263 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 264 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 str params = d . code . substr ( start + 1 , end - start - 2 ) ; 
-#line 265 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 264 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( parenCount == 0 && ! params . empty ( ) && params . find ( '=' ) != str :: npos ) { 
-#line 266 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-std :: cout << "Removing default parameters from function: " << d . name << params << "\n" ; 
-#line 269 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 268 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 size_t pos = params . find ( '=' ) ; 
-#line 270 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 269 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 while ( pos != str :: npos ) { 
-#line 271 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 270 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 size_t nextComma = params . find ( ',' , pos ) ; 
-#line 272 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 271 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 if ( nextComma == str :: npos ) { 
-#line 273 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 272 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 params . erase ( pos ) ; 
-#line 274 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 273 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 break ; 
-#line 275 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 274 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } else { 
-#line 276 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 275 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 params . erase ( pos , nextComma - pos + 1 ) ; 
+#line 276 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 277 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 278 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 pos = params . find ( '=' , pos ) ; 
-#line 279 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 278 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 281 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 280 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 str newCode = d . code . substr ( 0 , start + 1 ) + params + d . code . substr ( end - 1 ) ; 
-#line 282 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 281 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 const_cast < DeclInfo & > ( d ) . code = newCode ; 
+#line 282 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+} 
 #line 283 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
 #line 284 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 285 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
-} 
-#line 287 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 286 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 sourceDecls . push_back ( d ) ; 
-#line 288 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 287 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } 
-#line 289 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 288 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 std :: sort ( sourceDecls . begin ( ) , sourceDecls . end ( ) , [ ] ( const DeclInfo & a , const DeclInfo & b ) { 
-#line 290 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 289 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return a . sourceOrderIndex < b . sourceOrderIndex ; 
-#line 291 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 290 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ) ; 
-#line 292 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 291 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 return sourceDecls ; 
-#line 293 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 292 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ;
 
 
-#line 295 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 294 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "pub" ) ) ) void writeFiles ( const str & base , const str & dir ) { 
-#line 296 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 295 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 file :: writer hfile ( std :: filesystem :: path ( dir . stdstr ( ) ) / ( base + ".yapp.h" ) ) ; 
-#line 297 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 296 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 file :: writer cppfile ( std :: filesystem :: path ( dir . stdstr ( ) ) / ( base + ".yapp.cpp" ) ) ; 
-#line 298 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 297 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 hfile << "#pragma once\n" ; 
-#line 299 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 298 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 hfile << "#define pub\n#define priv\n\n" ; 
-#line 300 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 299 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 cppfile << "#include \"" << base << ".yapp.h\"\n\n" ; 
-#line 301 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 300 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 cppfile << "#define pub\n#define priv\n\n" ; 
-#line 302 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 301 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 auto seen = collectUniqueDecls ( ) ; 
-#line 303 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 302 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 auto pubDecls = collectHeaderDecls ( seen ) ; 
-#line 304 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 303 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 emitWithNamespaces ( hfile , pubDecls ) ; 
-#line 305 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 304 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 hfile << "#undef pub\n#undef priv\n" ; 
-#line 306 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 305 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 auto sourceDecls = collectSourceDecls ( seen ) ; 
-#line 307 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 306 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 emitWithNamespaces ( cppfile , sourceDecls ) ; 
-#line 308 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 307 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 cppfile << "#undef pub\n#undef priv\n" ; 
-#line 309 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 308 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 } ;
 
 #undef pub

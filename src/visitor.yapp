@@ -1,13 +1,14 @@
+#import std.set
+
 #import <clang-c/Index.h>
 #import <vector>
 #import <string>
-#import <unordered_set>
 #import <cstring>
 #import decl_utils
 
 pub vec<DeclInfo> decls;
 pub int orderCounter = 0;
-pub std::unordered_set<str> typedefBackedTags;
+pub set::hash<str> typedefBackedTags;
 pub vec<str> anonymousTypes;
 
 priv bool isTemplateType(CXCursorKind kind) {
@@ -232,7 +233,7 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
             if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
                 str structName = toStdString(clang_getCursorUSR(c));
                 if (!structName.empty()) {
-                    static_cast<std::unordered_set<str>*>(client_data)->insert(structName);
+                    static_cast<set::hash<str>*>(client_data)->insert(structName);
                 }
             }
             return CXChildVisit_Continue;

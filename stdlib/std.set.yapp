@@ -1,0 +1,16 @@
+#import <set>
+#import <unordered_set>
+
+namespace set {
+    template <typename T>
+    using hash = std::unordered_set<T>;
+
+    template <typename T>
+    using tree = std::set<T>;
+
+    template <typename T>
+    using unordered = std::unordered_set<T>;
+
+    template <typename T>
+    using ordered = std::set<T>;
+}

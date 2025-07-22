@@ -1,0 +1,16 @@
+#import <map>
+#import <unordered_map>
+
+namespace map {
+    template <typename T, typename U>
+    using hash = std::unordered_map<T, U>;
+
+    template <typename T, typename U>
+    using tree = std::map<T, U>;
+
+    template <typename T, typename U>
+    using unordered = std::unordered_map<T, U>;
+
+    template <typename T, typename U>
+    using ordered = std::map<T, U>;
+}

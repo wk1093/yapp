@@ -102,7 +102,7 @@ filePath = GLOBAL_SOURCE_FILE ;
 #line 77 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 } 
 #line 79 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
-str lineDirective = "\n#line " + std :: to_string ( line ) + " \"" + filePath + "\"\n" ; 
+str lineDirective = "\n#line " + str :: from ( line ) + " \"" + filePath + "\"\n" ; 
 #line 81 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"
 return lineDirective ; 
 #line 82 "/home/wyatt/dev/cpp/pubprivattr/src/decl_utils.yapp"

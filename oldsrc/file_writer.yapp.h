@@ -47,7 +47,7 @@
 ;
 
 
-#line 295 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
+#line 294 "/home/wyatt/dev/cpp/pubprivattr/src/file_writer.yapp"
 __attribute__ ( ( annotate ( "pub" ) ) ) void writeFiles ( const str & base , const str & dir ) ;;
 
 #undef pub

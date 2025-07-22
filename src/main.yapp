@@ -83,46 +83,79 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
 }
 
 pub str preprocessStep2(const str& p0File, const str& outputDir) {
-    file::reader in(p0File);
-    if (!in) {
-        io::println(io::err, "Failed to open pre-preprocessed file for second preprocessing: ", p0File);
-        exit(1);
-    }
-    str::writer out;
-    str line;
+    // str::writer out;
+    // str line;
 
     // also doesn't need to be at the start of the line
     std::regex usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
-    std::regex usingAliasFix(R"((pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_:]*)\s*;)");
+    std::regex usingAliasFix(R"((template\s*\<.*?\>\s*)?(pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*;)");
     // with the custom import system, sometimes clang will remove using directives because "the namespace doesn't exist"
     // but we need to keep them
-    while (std::getline(in, line)) {
-        std::smatch m;
-        if (std::regex_search(line, m, usingNamespaceFix)) {
-            // We found a using namespace directive
-            // We need to check if it is a pub or priv using namespace directive
-            // If it is, we need to add the pub/priv attribute to the declaration
-            str attr = m[1].str(); // "pub" or "priv"
-            str namespaceName = m[2].str(); // the namespace name
-            // we add namespace NAME {} to make sure the namespace is defined
-            // This is a workaround for the issue where clang removes using directives
-            out << "namespace " << namespaceName << " {};"; // Ensure the namespace is defined
-            // If attr is empty, we assume it's a normal using directive
-            if (attr.empty()) {
-                out << "using namespace " << namespaceName << ";\n";
-            } else {
-                out << attr << " using namespace " << namespaceName << ";\n";
-            }
-        } else if (std::regex_search(line, m, usingAliasFix)) {
-            // For some reason libclang like to just remove using aliases sometimes, so we will just add them back at the end
+    // while (std::getline(in, line)) {
+    //     std::smatch m;
+    //     if (std::regex_search(line, m, usingNamespaceFix)) {
+    //         // We found a using namespace directive
+    //         // We need to check if it is a pub or priv using namespace directive
+    //         // If it is, we need to add the pub/priv attribute to the declaration
+    //         str attr = m[1].str(); // "pub" or "priv"
+    //         str namespaceName = m[2].str(); // the namespace name
+    //         // we add namespace NAME {} to make sure the namespace is defined
+    //         // This is a workaround for the issue where clang removes using directives
+    //         out << "namespace " << namespaceName << " {};"; // Ensure the namespace is defined
+    //         // If attr is empty, we assume it's a normal using directive
+    //         if (attr.empty()) {
+    //             out << "using namespace " << namespaceName << ";\n";
+    //         } else {
+    //             out << attr << " using namespace " << namespaceName << ";\n";
+    //         }
+    //     } else if (std::regex_search(line, m, usingAliasFix)) {
+    //         // For some reason libclang like to just remove using aliases sometimes, so we will just add them back at the end
 
-            // This is very similar to the pub preproc where it is a fake function declaration
-            out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
+    //         // This is very similar to the pub preproc where it is a fake function declaration
+    //         out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
             
-            usingStored.push_back(m[0].str());
+    //         usingStored.push_back(m[0].str());
+    //     } else {
+    //         out << line << "\n";
+    //     }
+    // }
+    // we can't do line by line because we can have multiple using directives in one line
+    // so we will just read the whole file and then process it
+    str content = io::fileReadText(p0File).unwrap();
+
+    std::smatch m;
+    std::string result;
+    std::string::const_iterator searchStart = content.cbegin();
+
+    while (std::regex_search(searchStart, content.cend(), m, usingNamespaceFix)) {
+        // Append the part before the match
+        result.append(searchStart, m[0].first);
+
+        std::string attr = m[1].str();         // "pub" or "priv"
+        std::string namespaceName = m[2].str();
+
+        // Build the replacement
+        if (attr.empty()) {
+            result += "\nnamespace " + namespaceName + " {};using namespace " + namespaceName + ";\n";
         } else {
-            out << line << "\n";
+            result += "\nnamespace " + namespaceName + " {};" + attr + " using namespace " + namespaceName + ";\n";
         }
+
+        // Move past this match
+        searchStart = m[0].second;
+    }
+
+    // Append the remaining part
+    result.append(searchStart, content.cend());
+    content = std::move(result);
+
+    // Fix using alias directives
+    while (std::regex_search(content, m, usingAliasFix)) {
+        // For some reason libclang like to just remove using aliases sometimes, so we will just
+        // add them back at the end
+        // This is very similar to the pub preproc where it is a fake function declaration
+        usingStored.push_back(m[0].str());
+        content = std::regex_replace(content, usingAliasFix, "\npub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" + std::to_string(usingStored.size() - 1) + "();\n", std::regex_constants::format_first_only);
     }
     str outFile = std::filesystem::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
     file::writer p1f(outFile);
@@ -130,7 +163,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
         io::println(io::err, "Failed to write second preprocessed file: ", outFile);
         exit(1);
     }
-    p1f << out.str();
+    p1f << content;
     p1f.close();
     return outFile;
 }
