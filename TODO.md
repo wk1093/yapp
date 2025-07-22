@@ -16,6 +16,7 @@
 - [ ] HUGE: Fix the CMake build system to be more robust and easier to read.
 - [ ] BIG: Filesystem lib.
 - [ ] BIG: Algorithm lib.
+- [ ] BIG: Regex lib.
 
 Eventual Goals:
 - [ ] Have the compiler source use NO C++ stdlib at all, just use the YAPP stdlib.

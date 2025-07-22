@@ -25,7 +25,11 @@ public:
         return *this;
     }
 
-    pub std::string stdstr() const {
+    pub std::string& stdstr() {
+        return *this;
+    }
+
+    pub const std::string& stdstr() const {
         return *this;
     }
 
@@ -135,6 +139,25 @@ public:
         return toUnsignedLong(s, base);
     }
 
+    template< class CharT, class Traits, class Allocator >
+    pub static inline std::basic_istream<CharT, Traits>& getline( std::basic_istream<CharT, Traits>& input, std::basic_string<CharT, Traits, Allocator>& str, CharT delim ) {
+        return std::getline(input, str, delim);
+    }
+
+    template< class CharT, class Traits, class Allocator >
+    pub static inline std::basic_istream<CharT, Traits>& getline( std::basic_istream<CharT, Traits>& input, std::basic_string<CharT, Traits, Allocator>& str ) {
+        return std::getline(input, str);
+    }
+
+    template< class CharT, class Traits >
+    pub inline std::basic_istream<CharT, Traits>& getline( std::basic_istream<CharT, Traits>& input, CharT delim ) {
+        return std::getline(input, *this, delim);
+    }
+
+    template< class CharT, class Traits >
+    pub inline std::basic_istream<CharT, Traits>& getline( std::basic_istream<CharT, Traits>& input ) {
+        return std::getline(input, *this);
+    }
     
 };
 
@@ -144,4 +167,4 @@ public:
 
 
 // strings can handle binary data, this is just for clarity
-using bytestr = str;
+using bytestr = str;std::

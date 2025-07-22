@@ -1,0 +1,39 @@
+#import std.str
+#import <regex>
+
+namespace regex {
+    using result = std::match_results<str::const_iterator>;
+    using namespace std::regex_constants;
+    using re = std::regex;
+
+    // function aliases for regex operations
+    inline bool match(const str& s, result& m, const re& r, match_flag_type flags = match_default) {
+        return std::regex_match(s, m, r, flags);
+    }
+    inline bool match(const str& s, const re& r, match_flag_type flags = match_default) {
+        return std::regex_match(s, r, flags);
+    }
+    inline bool match(const str::const_iterator& begin, const str::const_iterator& end, result& m, const re& r, match_flag_type flags = match_default) {
+        return std::regex_match(begin, end, m, r, flags);
+    }
+    inline bool match(const str::const_iterator& begin, const str::const_iterator& end, const re& r, match_flag_type flags = match_default) {
+        return std::regex_match(begin, end, r, flags);
+    }
+    inline bool search(const str& s, result& m, const re& r, match_flag_type flags = match_default) {
+        return std::regex_search(s, m, r, flags);
+    }
+    inline bool search(const str& s, const re& r, match_flag_type flags = match_default) {
+        return std::regex_search(s, r, flags);
+    }
+    inline bool search(const str::const_iterator& begin, const str::const_iterator& end, result& m, const re& r, match_flag_type flags = match_default) {
+        return std::regex_search(begin, end, m, r, flags);
+    }
+    inline bool search(const str::const_iterator& begin, const str::const_iterator& end, const re& r, match_flag_type flags = match_default) {
+        return std::regex_search(begin, end, r, flags);
+    }
+    inline str replace(const str& s, const re& r, const str& fmt, match_flag_type flags = match_default) {
+        return std::regex_replace(s, r, fmt, flags);
+    }
+
+    
+}
