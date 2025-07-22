@@ -1,0 +1,27 @@
+#import std.vec
+
+#import <algorithm>
+
+namespace alg {
+    template<typename T>
+    void sort(vec<T>& v) {
+        std::sort(v.begin(), v.end());
+    }
+
+    template<typename T, typename Compare>
+    void sort(vec<T>& v, Compare comp) {
+        std::sort(v.begin(), v.end(), comp);
+    }
+
+    template<typename T>
+    void reverse(vec<T>& v) {
+        std::reverse(v.begin(), v.end());
+    }
+
+    template<typename T, typename Predicate>
+    vec<T> filter(const vec<T>& v, Predicate pred) {
+        vec<T> result;
+        std::copy_if(v.begin(), v.end(), std::back_inserter(result), pred);
+        return result;
+    }
+}

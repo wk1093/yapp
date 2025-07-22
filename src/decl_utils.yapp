@@ -1,8 +1,6 @@
+#import std.alg
+
 #import <clang-c/Index.h>
-#import <string>
-#import <vector>
-#import <cstring>
-#import <algorithm>
 
 struct pub DeclInfo {
     str name;
@@ -134,7 +132,7 @@ pub vec<str> getNamespaceChain(CXCursor cursor) {
         }
         parent = clang_getCursorSemanticParent(parent);
     }
-    std::reverse(chain.begin(), chain.end());
+    alg::reverse(chain);
     return chain;
 }
 

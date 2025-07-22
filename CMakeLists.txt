@@ -47,6 +47,7 @@ set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.set.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.map.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.regex.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.alg.yapp
 )
 
 # auto generate the commands to compile the standard library

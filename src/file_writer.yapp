@@ -1,5 +1,6 @@
 #import std.io
 #import std.map
+#import std.alg
 
 #import <clang-c/Index.h>
 #import <cstring>
@@ -91,7 +92,7 @@ priv vec<DeclInfo> collectUniqueDecls() {
             }
         }
     }
-    std::sort(seen.begin(), seen.end(), [](const DeclInfo& a, const DeclInfo& b) {
+    alg::sort(seen, [](const DeclInfo& a, const DeclInfo& b) {
         return a.sourceOrderIndex < b.sourceOrderIndex;
     });
     return seen;
@@ -208,7 +209,7 @@ priv vec<DeclInfo> collectHeaderDecls(const vec<DeclInfo>& seen) {
             pubDecls.push_back(copy);
         }
     }
-    std::sort(pubDecls.begin(), pubDecls.end(), [](const DeclInfo& a, const DeclInfo& b) {
+    alg::sort(pubDecls, [](const DeclInfo& a, const DeclInfo& b) {
         return a.sourceOrderIndex < b.sourceOrderIndex;
     });
     return pubDecls;
@@ -286,7 +287,7 @@ priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
         // static decls are allowed in source
         sourceDecls.push_back(d);
     }
-    std::sort(sourceDecls.begin(), sourceDecls.end(), [](const DeclInfo& a, const DeclInfo& b) {
+    alg::sort(sourceDecls, [](const DeclInfo& a, const DeclInfo& b) {
         return a.sourceOrderIndex < b.sourceOrderIndex;
     });
     return sourceDecls;

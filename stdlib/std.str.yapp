@@ -3,6 +3,7 @@
 #import <vector>
 #import <cstdarg>
 #import <filesystem>
+#import <cstring>
 
 class pub str : public std::string {
 public:
