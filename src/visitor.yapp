@@ -8,7 +8,7 @@
 
 pub vec<DeclInfo> decls;
 pub int orderCounter = 0;
-pub set::hash<str> typedefBackedTags;
+pub set::unordered<str> typedefBackedTags;
 pub vec<str> anonymousTypes;
 
 priv bool isTemplateType(CXCursorKind kind) {
@@ -233,7 +233,7 @@ pub CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData cl
             if (kind == CXCursor_StructDecl || kind == CXCursor_UnionDecl || kind == CXCursor_EnumDecl) {
                 str structName = toStdString(clang_getCursorUSR(c));
                 if (!structName.empty()) {
-                    static_cast<set::hash<str>*>(client_data)->insert(structName);
+                    static_cast<set::unordered<str>*>(client_data)->insert(structName);
                 }
             }
             return CXChildVisit_Continue;
