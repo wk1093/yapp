@@ -1,6 +1,7 @@
 #import std.io
 #import std.map
 #import std.alg
+#import std.fs
 
 #import <clang-c/Index.h>
 #import <cstring>
@@ -294,8 +295,8 @@ priv vec<DeclInfo> collectSourceDecls(const vec<DeclInfo>& seen) {
 }
 
 pub void writeFiles(const str& base, const str& dir) {
-    file::writer hfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.h"));
-    file::writer cppfile(std::filesystem::path(dir.stdstr()) / (base + ".yapp.cpp"));
+    file::writer hfile(fs::path(dir.stdstr()) / (base + ".yapp.h"));
+    file::writer cppfile(fs::path(dir.stdstr()) / (base + ".yapp.cpp"));
     hfile << "#pragma once\n";
     hfile << "#define pub\n#define priv\n\n";
     cppfile << "#include \"" << base << ".yapp.h\"\n\n";

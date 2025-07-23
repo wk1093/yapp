@@ -3,7 +3,8 @@ project(yapp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(RUN_YAPP_TESTS ON)
+set(RUN_YAPP_TESTS OFF)
+set(RUN_YAPP_EXAMPLE_FLUIDSIM ON)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -48,6 +49,7 @@ set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.map.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.regex.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.alg.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.fs.yapp
 )
 
 # auto generate the commands to compile the standard library
@@ -128,3 +130,51 @@ else()
         COMMENT "YAPP tests are disabled. Set RUN_YAPP_TESTS to ON to enable."
     )
 endif()
+
+if (RUN_YAPP_EXAMPLE_FLUIDSIM)
+    file(GLOB_RECURSE FLUIDSIM_SOURCES "examples/fluidsim/*.yapp")
+    set(YAPP_EX_FLUID_PREPROC_COMMANDS "")
+    set(YAPP_EX_FLUID_COMPILE_COMMANDS "")
+    set(YAPP_EX_FLUID_OBJECTS "")
+    foreach(source ${FLUIDSIM_SOURCES})
+        get_filename_component(source_name ${source} NAME)
+        set(output_file "${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim/${source_name}.cpp")
+        get_filename_component(output_file_dir ${output_file} DIRECTORY)
+        list(APPEND YAPP_EX_FLUID_PREPROC_COMMANDS COMMAND ${YAPP_NEW_COMPILER} ${source} -o ${output_file_dir})
+        list(APPEND YAPP_EX_FLUID_COMPILE_COMMANDS COMMAND ${CMAKE_CXX_COMPILER} -c -o ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim/${source_name}.o ${output_file} -Wno-attributes -I${CMAKE_CURRENT_BINARY_DIR}/stdlib -fPIC)
+        list(APPEND YAPP_EX_FLUID_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim/${source_name}.o)
+    endforeach()
+    add_custom_target(yappc_example_fluidsim
+        DEPENDS yappc_compile
+        DEPENDS yapp_stdlib
+        COMMENT "Compiling YAPP example: Fluid Simulation"
+        
+        # make dir
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim
+        # compile the example yapp sources into c++
+        ${YAPP_EX_FLUID_PREPROC_COMMANDS}
+        # compile the generated c++ files
+        ${YAPP_EX_FLUID_COMPILE_COMMANDS}
+        # link the generated c++ files into an executable
+        COMMAND ${CMAKE_CXX_COMPILER} -o ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim/fluidsim ${YAPP_LINK_FLAGS} ${YAPP_EX_FLUID_OBJECTS}
+    )
+else()
+    add_custom_target(yappc_example_fluidsim
+        DEPENDS yappc_compile
+        DEPENDS yapp_stdlib
+        COMMENT "YAPP example: Fluid Simulation is disabled. Set RUN_YAPP_EXAMPLE_FLUIDSIM to ON to enable."
+    )
+endif()
+
+add_custom_target(yappc_all)
+if (RUN_YAPP_TESTS)
+    add_dependencies(yappc_all yappc_test)
+else()
+    add_dependencies(yappc_all yappc_compile)
+endif()
+if (RUN_YAPP_EXAMPLE_FLUIDSIM)
+    add_dependencies(yappc_all yappc_example_fluidsim)
+else()
+    add_dependencies(yappc_all yappc_compile)
+endif()
+add_dependencies(yappc_all yapp_stdlib)

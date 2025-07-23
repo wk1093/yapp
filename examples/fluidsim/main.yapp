@@ -1,0 +1,8 @@
+#import std.io
+
+pub int main(vec<str> args) {
+    io::println("Not Implemented!");
+    io::println("This is a placeholder for the fluidsim example.");
+
+    return 0;
+}

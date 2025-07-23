@@ -1,5 +1,6 @@
 #import std.io
 #import std.regex
+#import std.fs
 
 #import <filesystem>
 #import <vector>
@@ -72,7 +73,7 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
             out << line << "\n";
         }
     }
-    str outFile = std::filesystem::path(outputDir.stdstr()) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
+    str outFile = fs::path(outputDir.stdstr()) / (inputFile.substr(inputFile.find_last_of("/\\") + 1) + ".pp0");
     file::writer p0f(outFile);
     if (!p0f) {
         io::println(io::err, "Failed to write pre-preprocessed file: ", outFile);
@@ -117,7 +118,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
 
     // Append the remaining part
     result.append(searchStart, content.cend());
-    content = std::move(result);
+    content = move(result);
 
     // Fix using alias directives
     while (regex::search(content, m, usingAliasFix)) {
@@ -127,7 +128,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
         usingStored.push_back(m[0].str());
         content = regex::replace(content, usingAliasFix, "\npub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" + str::from(usingStored.size() - 1) + "();\n", regex::format_first_only);
     }
-    str outFile = std::filesystem::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
+    str outFile = fs::path(outputDir.stdstr()) / (p0File.substr(p0File.find_last_of("/\\") + 1) + ".pp1");
     file::writer p1f(outFile);
     if (!p1f) {
         io::println(io::err, "Failed to write second preprocessed file: ", outFile);
@@ -252,10 +253,10 @@ pub int main(vec<str> argv) {
             } else {
                 outputDir = myArgs[i + 1];
                 i++; // Skip the next argument since it's the directory
-                std::filesystem::path dirPath(outputDir.stdstr());
-                if (!std::filesystem::exists(dirPath)) {
+                fs::path dirPath(outputDir.stdstr());
+                if (!fs::exists(dirPath)) {
                     io::println(io::err, "Warning: Specified output directory does not exist. Creating: ", outputDir);
-                    std::filesystem::create_directories(dirPath);
+                    fs::create_directories(dirPath);
                 }
             }
         }
@@ -362,12 +363,12 @@ pub int main(vec<str> argv) {
     clang_disposeIndex(index);
 
     // Post-process the header file if it was generated
-    str headerFile = std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.h");
+    str headerFile = fs::path(outputDir.stdstr()) / (filename + ".yapp.h");
     postProcess(headerFile);
 
     if (compileGenerated) {
         io::println("WARNING: Auto compiling generated files is not recommended. Use with caution.");
-        str outdirfilename = std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.cpp");
+        str outdirfilename = fs::path(outputDir.stdstr()) / (filename + ".yapp.cpp");
         str compileCommand = "clang++ \"" + outdirfilename + "\" ";
         for (const auto& arg : compileArgs) {
             compileCommand += "\"" + arg + "\" ";
@@ -380,16 +381,16 @@ pub int main(vec<str> argv) {
 
     if (!debugMode) {
         // remove intermediate files
-        std::remove(preprocOutputFile.c_str());
-        std::remove(step1File.c_str());
-        std::remove(step0File.c_str());
+        fs::remove(preprocOutputFile.c_str());
+        fs::remove(step1File.c_str());
+        fs::remove(step0File.c_str());
 
         if ((!compileGenerated && sourceToggle) || (compileGenerated && !sourceToggle)) {
-            std::remove((std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.cpp")).c_str());
+            fs::remove((fs::path(outputDir.stdstr()) / (filename + ".yapp.cpp")).c_str());
         }
 
         if (removeHeader) {
-            std::remove((std::filesystem::path(outputDir.stdstr()) / (filename + ".yapp.h")).c_str());
+            fs::remove((fs::path(outputDir.stdstr()) / (filename + ".yapp.h")).c_str());
         }
     }
 

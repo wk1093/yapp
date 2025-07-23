@@ -1,0 +1,7 @@
+#import std.io
+
+#import <filesystem>
+
+namespace fs {
+    using namespace std::filesystem;
+}

@@ -162,10 +162,7 @@ public:
     
 };
 
-#using template<> pub struct std::hash<str> { size_t operator()(const str& s) const noexcept { return std::hash<std::string>()(s); }};
-
-
-
+#using template<> struct std::hash<str> { size_t operator()(const str& s) const noexcept { return std::hash<std::string>()(s); }};
 
 // strings can handle binary data, this is just for clarity
-using bytestr = str;std::
+using bytestr = str;
