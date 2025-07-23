@@ -6,7 +6,7 @@ import time
 
 debug = True
 
-yappc_path = "./build/custom/yappc"
+yappc_path = "./build/yappc"
 
 if len(sys.argv) > 1 and sys.argv[1] == "nodbg":
     debug = False

@@ -1,8 +1,248 @@
-#import std.io
+#import std.math
 
-pub int main(vec<str> args) {
-    io::println("Not Implemented!");
-    io::println("This is a placeholder for the fluidsim example.");
+#import <SFML/Graphics.hpp>
+
+
+const int GRID_SIZE = 64*2; // Grid resolution (64x64)
+const float DT = 0.1f; // Time step
+const float DIFFUSION = 0.00001f; // Diffusion rate
+const float VISCOSITY = 0.0001f; // Viscosity
+const int WINDOW_SIZE = 64*4; // Window size in pixels
+const float SCALE = (float)(WINDOW_SIZE) / GRID_SIZE; // Scale factor for rendering
+
+// Helper function to convert 2D grid indices to 1D array index
+int IX(int x, int y) {
+    x = math::max(0, math::min(x, GRID_SIZE - 1));
+    y = math::max(0, math::min(y, GRID_SIZE - 1));
+    return x + y * GRID_SIZE;
+}
+
+sf::Color HSVtoRGB(float h, float s, float v) {
+    float c = v * s;
+    float x = c * (1 - fabs(fmod(h / 60.0f, 2) - 1));
+    float m = v - c;
+    float r, g, b;
+
+    if (h < 60)      { r = c; g = x; b = 0; }
+    else if (h < 120){ r = x; g = c; b = 0; }
+    else if (h < 180){ r = 0; g = c; b = x; }
+    else if (h < 240){ r = 0; g = x; b = c; }
+    else if (h < 300){ r = x; g = 0; b = c; }
+    else             { r = c; g = 0; b = x; }
+
+    return sf::Color(
+        (sf::Uint8)((r + m) * 255),
+        (sf::Uint8)((g + m) * 255),
+        (sf::Uint8)((b + m) * 255)
+    );
+}
+
+
+class Fluid {
+public:
+    Fluid() : u(GRID_SIZE * GRID_SIZE), v(GRID_SIZE * GRID_SIZE),
+          u_prev(GRID_SIZE * GRID_SIZE), v_prev(GRID_SIZE * GRID_SIZE),
+          density(GRID_SIZE * GRID_SIZE), density_prev(GRID_SIZE * GRID_SIZE) {
+    image.create(GRID_SIZE, GRID_SIZE, sf::Color::Black);
+    texture.create(GRID_SIZE, GRID_SIZE);
+    sprite.setScale(SCALE, SCALE); // Scale up to window size
+}
+
+
+    void addDensity(int x, int y, float amount) {
+        density[IX(x, y)] += amount;
+    }
+
+    void addVelocity(int x, int y, float amountX, float amountY) {
+        u[IX(x, y)] += amountX;
+        v[IX(x, y)] += amountY;
+    }
+
+    void step() {
+        diffuse(1, u_prev, u, VISCOSITY);
+        diffuse(2, v_prev, v, VISCOSITY);
+        project(u_prev, v_prev, u, v);
+        advect(1, u, u_prev, u_prev, v_prev);
+        advect(2, v, v_prev, u_prev, v_prev);
+        project(u, v, u_prev, v_prev);
+        diffuse(0, density_prev, density, DIFFUSION);
+        advect(0, density, density_prev, u, v);
+    }
+
+void render(sf::RenderWindow& window) {
+    for (int j = 0; j < GRID_SIZE; ++j) {
+        for (int i = 0; i < GRID_SIZE; ++i) {
+            int idx = IX(i, j);
+            float d = density[idx];
+            float speed = std::sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
+
+            // Clamp values
+            d = std::min(d, 255.0f);
+            speed = std::min(speed, 10.0f); // You can tweak this max for more hue variance
+
+            // Convert speed to hue (0–300 degrees, red → violet)
+            float curvedSpeed = std::sqrt(speed); // nonlinear curve
+            float hue = std::fmod(360.0f*2.0f * (curvedSpeed / std::sqrt(10.0f)), 360.0f);
+            float brightness = d / 255.0f;        // From density
+            float saturation = 1.0f;
+
+            sf::Color color = HSVtoRGB(hue, saturation, brightness);
+            image.setPixel(i, j, color);
+        }
+    }
+
+    texture.update(image);
+    sprite.setTexture(texture);
+    window.draw(sprite);
+}
+
+
+private:
+    vec<float> u, v; // Velocity field (x, y components)
+    vec<float> u_prev, v_prev; // Previous velocity field
+    vec<float> density, density_prev; // Density field
+    sf::Image image;
+    sf::Texture texture;
+    sf::Sprite sprite;
+
+    void diffuse(int b, vec<float>& x, vec<float>& x0, float diff) {
+        float a = DT * diff * (GRID_SIZE - 2) * (GRID_SIZE - 2);
+        linearSolve(b, x, x0, a, 1 + 4 * a);
+    }
+
+    void advect(int b, vec<float>& d, vec<float>& d0,
+                vec<float>& u, vec<float>& v) {
+        float dt0 = DT * (GRID_SIZE - 2);
+        for (int i = 1; i < GRID_SIZE - 1; ++i) {
+            for (int j = 1; j < GRID_SIZE - 1; ++j) {
+                float x = i - dt0 * u[IX(i, j)];
+                float y = j - dt0 * v[IX(i, j)];
+                x = math::max(0.5f, math::min((float)(GRID_SIZE) - 1.5f, x));
+                y = math::max(0.5f, math::min((float)(GRID_SIZE) - 1.5f, y));
+                int i0 = (int)(x), i1 = i0 + 1;
+                int j0 = (int)(y), j1 = j0 + 1;
+                float s1 = x - i0, s0 = 1 - s1;
+                float t1 = y - j0, t0 = 1 - t1;
+                d[IX(i, j)] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+                              s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+            }
+        }
+        setBoundary(b, d);
+    }
+
+    void project(vec<float>& u, vec<float>& v,
+                 vec<float>& p, vec<float>& div) {
+        for (int i = 1; i < GRID_SIZE - 1; ++i) {
+            for (int j = 1; j < GRID_SIZE - 1; ++j) {
+                div[IX(i, j)] = -0.5f * (
+                    u[IX(i + 1, j)] - u[IX(i - 1, j)] +
+                    v[IX(i, j + 1)] - v[IX(i, j - 1)]
+                ) / GRID_SIZE;
+                p[IX(i, j)] = 0;
+            }
+        }
+        setBoundary(0, div);
+        setBoundary(0, p);
+        linearSolve(0, p, div, 1, 4);
+        for (int i = 1; i < GRID_SIZE - 1; ++i) {
+            for (int j = 1; j < GRID_SIZE - 1; ++j) {
+                u[IX(i, j)] -= 0.5f * GRID_SIZE * (p[IX(i + 1, j)] - p[IX(i - 1, j)]);
+                v[IX(i, j)] -= 0.5f * GRID_SIZE * (p[IX(i, j + 1)] - p[IX(i, j - 1)]);
+            }
+        }
+        setBoundary(1, u);
+        setBoundary(2, v);
+    }
+
+    void linearSolve(int b, vec<float>& x, vec<float>& x0, float a, float c) {
+        for (int k = 0; k < 20; ++k) { // Iterative solver (Gauss-Seidel)
+            for (int i = 1; i < GRID_SIZE - 1; ++i) {
+                for (int j = 1; j < GRID_SIZE - 1; ++j) {
+                    x[IX(i, j)] = (x0[IX(i, j)] +
+                                   a * (x[IX(i + 1, j)] + x[IX(i - 1, j)] +
+                                        x[IX(i, j + 1)] + x[IX(i, j - 1)])) / c;
+                }
+            }
+            setBoundary(b, x);
+        }
+    }
+
+    void setBoundary(int b, vec<float>& x) {
+        for (int i = 1; i < GRID_SIZE - 1; ++i) {
+            x[IX(i, 0)] = b == 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
+            x[IX(i, GRID_SIZE - 1)] = b == 2 ? -x[IX(i, GRID_SIZE - 2)] : x[IX(i, GRID_SIZE - 2)];
+            x[IX(0, i)] = b == 1 ? -x[IX(1, i)] : x[IX(1, i)];
+            x[IX(GRID_SIZE - 1, i)] = b == 1 ? -x[IX(GRID_SIZE - 2, i)] : x[IX(GRID_SIZE - 2, i)];
+        }
+        x[IX(0, 0)] = 0.5f * (x[IX(1, 0)] + x[IX(0, 1)]);
+        x[IX(0, GRID_SIZE - 1)] = 0.5f * (x[IX(1, GRID_SIZE - 1)] + x[IX(0, GRID_SIZE - 2)]);
+        x[IX(GRID_SIZE - 1, 0)] = 0.5f * (x[IX(GRID_SIZE - 2, 0)] + x[IX(GRID_SIZE - 1, 1)]);
+        x[IX(GRID_SIZE - 1, GRID_SIZE - 1)] = 0.5f * (x[IX(GRID_SIZE - 2, GRID_SIZE - 1)] + x[IX(GRID_SIZE - 1, GRID_SIZE - 2)]);
+    }
+};
+
+int main(vec<str> args) {
+    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "2D Fluid Simulation");
+    window.setFramerateLimit(60);
+    Fluid fluid;
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        static sf::Vector2i prevMousePos = sf::Mouse::getPosition(window);
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            int x = mousePos.x / SCALE;
+            int y = mousePos.y / SCALE;
+
+            if (x >= 1 && x < GRID_SIZE - 1 && y >= 1 && y < GRID_SIZE - 1) {
+                float dx = (mousePos.x - prevMousePos.x) / (float)(SCALE);
+                float dy = (mousePos.y - prevMousePos.y) / (float)(SCALE);
+
+                const float maxSpeed = 10.0f;
+                float len = std::sqrt(dx * dx + dy * dy);
+                if (len > maxSpeed) {
+                    dx = dx / len * maxSpeed;
+                    dy = dy / len * maxSpeed;
+                }
+
+                // Apply in a radius
+                const int radius = 2; // Radius of effect in cells
+                const float densityStrength = 300.0f;
+                const float velocityStrength = 15.0f;
+
+                for (int j = -radius; j <= radius; ++j) {
+                    for (int i = -radius; i <= radius; ++i) {
+                        int xi = x + i;
+                        int yj = y + j;
+                        if (xi >= 1 && xi < GRID_SIZE - 1 && yj >= 1 && yj < GRID_SIZE - 1) {
+                            float dist2 = i * i + j * j;
+                            if (dist2 <= radius * radius) {
+                                float falloff = 1.0f - dist2 / (radius * radius); // smooth falloff
+                                fluid.addDensity(xi, yj, densityStrength * falloff);
+                                // fluid.addVelocity(xi, yj, dx * velocityStrength * falloff, dy * velocityStrength * falloff);
+                            }
+                        }
+                    }
+                }
+                fluid.addVelocity(x, y, dx * velocityStrength, dy * velocityStrength);
+            }
+
+            prevMousePos = mousePos;
+        } else {
+            prevMousePos = sf::Mouse::getPosition(window);
+        }
+
+        fluid.step();
+        window.clear();
+        fluid.render(window);
+        window.display();
+    }
 
     return 0;
 }

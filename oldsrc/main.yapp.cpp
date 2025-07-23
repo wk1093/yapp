@@ -134,7 +134,7 @@ __attribute__ ( ( annotate ( "pub" ) ) ) str preprocessStep2 ( const str & p0Fil
 #line 90 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 std :: regex usingNamespaceFix ( R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)" ) ; 
 #line 91 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
-std :: regex usingAliasFix ( R"((template\s*\<.*?\>\s*)?(pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*;)" ) ; 
+std :: regex usingAliasFix ( R"((template\s*\<.*?\>\s*)?(pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*(=\s*([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*)?;)" ) ; 
 #line 92 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"
 str content = io :: fileReadText ( p0File ) . unwrap ( ) ; 
 #line 94 "/home/wyatt/dev/cpp/pubprivattr/src/main.yapp"

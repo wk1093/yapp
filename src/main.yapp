@@ -81,7 +81,7 @@ pub str preprocessStep2(const str& p0File, const str& outputDir) {
 
     // also doesn't need to be at the start of the line
     regex::re usingNamespaceFix(R"((pub|priv)?\s*using\s+namespace\s+([a-zA-Z_][a-zA-Z0-9_:]*);)");
-    regex::re usingAliasFix(R"((template\s*\<.*?\>\s*)?(pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*;)");
+    regex::re usingAliasFix(R"((template\s*\<.*?\>\s*)?(pub|priv)?\s*using\s+([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*(=\s*([a-zA-Z_][a-zA-Z0-9_:<>, ]*)\s*)?;)");
 
     str content = io::fileReadText(p0File).unwrap();
 

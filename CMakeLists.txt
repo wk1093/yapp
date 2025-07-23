@@ -45,8 +45,9 @@ set(YAPP_STD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.set.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.map.yapp
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.regex.yapp
-    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.alg.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.alg.yapp 
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.fs.yapp
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/std.math.yapp
 )
 
 function(yapp_add_sources out_var sources output_dir)
@@ -69,6 +70,7 @@ function(yapp_add_sources out_var sources output_dir)
         list(APPEND dependencies DEPENDS ${dep})
     endforeach()
     add_custom_command(
+        COMMENT "Transpiling YAPP sources"
         ${output_files}
         ${depend_files}
         ${transpile_commands}
@@ -121,10 +123,11 @@ if (RUN_YAPP_TESTS)
 endif()
 
 if (RUN_YAPP_EXAMPLE_FLUIDSIM)
+    find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
     file(GLOB_RECURSE FLUIDSIM_SOURCES "examples/fluidsim/*.yapp")
     yapp_add_sources(FLUIDSIM_COMPILE_SOURCES "${FLUIDSIM_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim")
     add_executable(yappc_example_fluidsim ${FLUIDSIM_COMPILE_SOURCES})
-    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib)
+    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib sfml-graphics sfml-window sfml-system)
     target_include_directories(yappc_example_fluidsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim)
     add_dependencies(yappc_example_fluidsim yappc_compile)
 endif()
