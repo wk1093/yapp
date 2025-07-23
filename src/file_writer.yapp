@@ -4,13 +4,6 @@
 #import std.fs
 
 #import <clang-c/Index.h>
-#import <cstring>
-#import <filesystem>
-#import <fstream>
-#import <iostream>
-#import <unordered_map>
-#import <algorithm>
-#import <string>
 
 #import visitor
 #import decl_utils

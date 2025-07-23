@@ -1,9 +1,7 @@
 #import std.set
 
 #import <clang-c/Index.h>
-#import <vector>
-#import <string>
-#import <cstring>
+
 #import decl_utils
 
 pub vec<DeclInfo> decls;

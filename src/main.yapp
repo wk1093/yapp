@@ -2,15 +2,6 @@
 #import std.regex
 #import std.fs
 
-#import <filesystem>
-#import <vector>
-#import <string>
-#import <iostream>
-#import <fstream>
-#import <sstream>
-#import <cstring>
-#import <regex>
-
 #import file_writer
 #import visitor
 

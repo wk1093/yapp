@@ -14,9 +14,9 @@
 - [x] BIG: Fix default parameters. Should only show up in the header, not the source (if it is split into header/source).
 - [ ] HUGE: Stdlib automatic flags. It would be nice to be able to include the YAPP stdlib without having to specify a bunch of flags.
 - [ ] HUGE: Fix the CMake build system to be more robust and easier to read.
-- [ ] BIG: Filesystem lib.
+- [x] BIG: Filesystem lib.
 - [x] BIG: Algorithm lib.
 - [x] BIG: Regex lib.
 
 Eventual Goals:
-- [ ] Have the compiler source use NO C++ stdlib at all, just use the YAPP stdlib.
+- [x] Have the compiler source use NO C++ stdlib at all, just use the YAPP stdlib.
