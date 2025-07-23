@@ -20,3 +20,6 @@
 
 Eventual Goals:
 - [x] Have the compiler source use NO C++ stdlib at all, just use the YAPP stdlib.
+- [ ] Documentation for the YAPP stdlib.
+- [ ] Documentation for the YAPP transpiler.
+- [ ] Documentation for the YAPP language.
