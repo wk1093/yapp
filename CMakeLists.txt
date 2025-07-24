@@ -124,12 +124,39 @@ endif()
 
 if (RUN_YAPP_EXAMPLE_FLUIDSIM)
     find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+    include(FetchContent)
+    FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+        GIT_TAG        origin/master
+    )
+    # set GL version to 3.3
+    set(GLAD_GL_VERSION 3.3)
+    set(GLAD_PROFILE "core")
+    set(GLAD_GENERATE_LOADER ON)
+    set(GLAD_GENERATE_C_API ON)
+    set(GLAD_GENERATE_GL ON)
+    FetchContent_MakeAvailable(glad)
+    find_package(PkgConfig REQUIRED)
+    pkg_search_module(GLFW REQUIRED glfw3)
     file(GLOB_RECURSE FLUIDSIM_SOURCES "examples/fluidsim/*.yapp")
+    set(YAPP_TRANSPILER_FLAGS -- -I${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim -I${CMAKE_CURRENT_SOURCE_DIR}/examples/fluidsim)
     yapp_add_sources(FLUIDSIM_COMPILE_SOURCES "${FLUIDSIM_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim")
     add_executable(yappc_example_fluidsim ${FLUIDSIM_COMPILE_SOURCES})
-    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib sfml-graphics sfml-window sfml-system)
-    target_include_directories(yappc_example_fluidsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim)
+    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib sfml-graphics sfml-window sfml-system glad ${GLFW_LIBRARIES} dl)
+    target_include_directories(yappc_example_fluidsim PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim examples/fluidsim)
     add_dependencies(yappc_example_fluidsim yappc_compile)
+    # OpenMP
+    find_package(OpenMP REQUIRED)
+    if (OPENMP_FOUND)
+        target_compile_options(yappc_example_fluidsim PRIVATE ${OpenMP_CXX_FLAGS})
+        target_link_libraries(yappc_example_fluidsim PRIVATE OpenMP::OpenMP_CXX)
+        message(STATUS "OpenMP found, parallelization will be enabled in the fluidsim example.")
+        # Add OpenMP pragmas to the fluidsim example
+        set_source_files_properties(${FLUIDSIM_COMPILE_SOURCES} PROPERTIES COMPILE_FLAGS "-fopenmp")
+    else()
+        message(WARNING "OpenMP not found, parallelization will not be enabled in the fluidsim example.")
+    endif()
 endif()
 
 add_custom_target(yappc_all)

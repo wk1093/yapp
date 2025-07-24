@@ -26,6 +26,7 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
     regex::re pubPreproc(R"(^\s*#pub\s+(.*?)$)");
     regex::re importPreproc(R"(^\s*#import\s+(.*?)$)");
     regex::re usingDefRegex(R"(^\s*#using\s+(.*?)$)");
+    regex::re pragmaRegex(R"(^\s*#pragma\s+(.*?)$)");
         while (line.getline(in)) {
         regex::result m;
         if (regex::search(line, m, pubPreproc)) {
@@ -60,7 +61,13 @@ pub str prePreprocess(const str& inputFile, const str& outputDir, bool stdlib) {
             out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() << "();\n";
 
             usingStored.push_back(m[1].str());
-        } else {
+        } else if (regex::search(line, m, pragmaRegex)) {
+            // We found a #pragma directive
+            // We will just keep it as is
+            usingStored.push_back("#pragma " + m[1].str());
+            out << "pub __attribute__((annotate(\"__pub_using_alias__\"))) void __pub_using_alias__" << usingStored.size() - 1 << "();\n";
+        }
+        else {
             out << line << "\n";
         }
     }
