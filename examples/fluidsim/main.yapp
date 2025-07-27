@@ -3,14 +3,13 @@
 
 #import <glad/glad.h>
 #import <GLFW/glfw3.h>
-#import <SFML/Graphics.hpp>
 
 
-const int GRID_SIZE = 64*2; // Grid resolution (64x64)
+const int GRID_SIZE = 64*3; // Grid resolution (64x64)
 const float DT = 0.1f; // Time step
 const float DIFFUSION = 0.00001f; // Diffusion rate
 const float VISCOSITY = 0.0001f; // Viscosity
-const int WINDOW_SIZE = 64*4; // Window size in pixels
+const int WINDOW_SIZE = 64*6; // Window size in pixels
 const float SCALE = (float)(WINDOW_SIZE) / GRID_SIZE; // Scale factor for rendering
 
 const char* VERTEX_SHADER = R"(#version 330 core
@@ -29,10 +28,37 @@ const char* FRAGMENT_SHADER =R"(#version 330 core
 out vec4 FragColor;
 
 in vec2 TexCoord;
-uniform sampler2D uTexture;
+uniform sampler2D uSimData; // RGBA32F: r=density, g=u, b=v, a=unused
+
+// HSV to RGB conversion in GLSL
+vec3 hsv2rgb(float h, float s, float v) {
+    float c = v * s;
+    float x = c * (1.0 - abs(mod(h / 60.0, 2.0) - 1.0));
+    float m = v - c;
+    float r, g, b;
+    if (h < 60.0)      { r = c; g = x; b = 0.0; }
+    else if (h < 120.0){ r = x; g = c; b = 0.0; }
+    else if (h < 180.0){ r = 0.0; g = c; b = x; }
+    else if (h < 240.0){ r = 0.0; g = x; b = c; }
+    else if (h < 300.0){ r = x; g = 0.0; b = c; }
+    else               { r = c; g = 0.0; b = x; }
+    return vec3(r + m, g + m, b + m);
+}
 
 void main() {
-    FragColor = texture(uTexture, TexCoord);
+    vec4 sim = texture(uSimData, TexCoord);
+    float d = sim.r;
+    float u = sim.g;
+    float v = sim.b;
+    float speed = sqrt(u * u + v * v);
+    d = min(d, 255.0);
+    speed = min(speed, 10.0);
+    float curvedSpeed = sqrt(speed);
+    float hue = mod(360.0 * 2.0 * (curvedSpeed / sqrt(10.0)), 360.0);
+    float brightness = d / 255.0;
+    float saturation = 1.0;
+    vec3 rgb = hsv2rgb(hue, saturation, brightness);
+    FragColor = vec4(rgb, 1.0);
 }
 )";
 
@@ -85,35 +111,13 @@ GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc) {
     return program;
 }
 
-sf::Color HSVtoRGB(float h, float s, float v) {
-    float c = v * s;
-    float x = c * (1 - fabs(fmod(h / 60.0f, 2) - 1));
-    float m = v - c;
-    float r, g, b;
-
-    if (h < 60)      { r = c; g = x; b = 0; }
-    else if (h < 120){ r = x; g = c; b = 0; }
-    else if (h < 180){ r = 0; g = c; b = x; }
-    else if (h < 240){ r = 0; g = x; b = c; }
-    else if (h < 300){ r = x; g = 0; b = c; }
-    else             { r = c; g = 0; b = x; }
-
-    return sf::Color(
-        (sf::Uint8)((r + m) * 255),
-        (sf::Uint8)((g + m) * 255),
-        (sf::Uint8)((b + m) * 255)
-    );
-}
-
-
 class Fluid {
 public:
     Fluid() : u(GRID_SIZE * GRID_SIZE), v(GRID_SIZE * GRID_SIZE),
           u_prev(GRID_SIZE * GRID_SIZE), v_prev(GRID_SIZE * GRID_SIZE),
           density(GRID_SIZE * GRID_SIZE), density_prev(GRID_SIZE * GRID_SIZE) {
-    initGLTexture();
-}
-
+        initGLTexture();
+    }
 
     void addDensity(int x, int y, float amount) {
         density[IX(x, y)] += amount;
@@ -136,53 +140,39 @@ public:
     }
 
     void render() {
+        // Upload density, u, v to a single RGBA32F texture
         for (int j = 0; j < GRID_SIZE; ++j) {
             for (int i = 0; i < GRID_SIZE; ++i) {
                 int idx = IX(i, j);
-                float d = density[idx];
-                float speed = math::sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
-
-                d = math::min(d, 255.0f);
-                speed = math::min(speed, 10.0f);
-
-                float curvedSpeed = math::sqrt(speed);
-                float hue = math::fmod(360.0f * 2.0f * (curvedSpeed / math::sqrt(10.0f)), 360.0f);
-                float brightness = d / 255.0f;
-                float saturation = 1.0f;
-
-                sf::Color c = HSVtoRGB(hue, saturation, brightness);
-                int base = 3 * (j * GRID_SIZE + i);
-                pixelBuffer[base + 0] = c.r;
-                pixelBuffer[base + 1] = c.g;
-                pixelBuffer[base + 2] = c.b;
+                int base = 4 * (j * GRID_SIZE + i);
+                simBuffer[base + 0] = density[idx];
+                simBuffer[base + 1] = u[idx];
+                simBuffer[base + 2] = v[idx];
+                simBuffer[base + 3] = 0.0f;
             }
         }
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GRID_SIZE, GRID_SIZE, GL_RGB, GL_UNSIGNED_BYTE, pixelBuffer.data());
-
+        glBindTexture(GL_TEXTURE_2D, simTexID);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GRID_SIZE, GRID_SIZE, GL_RGBA, GL_FLOAT, simBuffer.data());
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
 
-private:
+public:
     vec<float> u, v; // Velocity field (x, y components)
     vec<float> u_prev, v_prev; // Previous velocity field
     vec<float> density, density_prev; // Density field
-    GLuint textureID;
-    vec<uint8_t> pixelBuffer;
+    GLuint simTexID;
+    vec<float> simBuffer; // RGBA32F buffer
 
     void initGLTexture() {
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GRID_SIZE, GRID_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-        pixelBuffer.resize(GRID_SIZE * GRID_SIZE * 3);
+        glGenTextures(1, &simTexID);
+        glBindTexture(GL_TEXTURE_2D, simTexID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, GRID_SIZE, GRID_SIZE, 0, GL_RGBA, GL_FLOAT, nullptr);
+        simBuffer.resize(GRID_SIZE * GRID_SIZE * 4);
     }
 
     void diffuse(int b, vec<float>& x, vec<float>& x0, float diff) {
@@ -311,6 +301,11 @@ glEnableVertexAttribArray(1);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     GLuint shaderProgram = createShaderProgram(VERTEX_SHADER, FRAGMENT_SHADER);
     glUseProgram(shaderProgram);
+    // Bind simTexID to texture unit 0 and set uniform
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fluid.simTexID);
+    GLint loc = glGetUniformLocation(shaderProgram, "uSimData");
+    glUniform1i(loc, 0);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -365,7 +360,6 @@ if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
 }
 
         fluid.step();
-
         glClear(GL_COLOR_BUFFER_BIT);
         glBindVertexArray(VAO);
         fluid.render();
