@@ -154,26 +154,13 @@ uniform float u_dt;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv = (vec2(coord) + 0.5) / float(GRID_SIZE);
     
-    // Match the CPU advection scaling: dt * (GRID_SIZE - 2)
-    float dt0 = u_dt * (GRID_SIZE - 2);
-
-    // Convert integer coords to floating point for calculations
-    vec2 pos = vec2(coord);
-
-    // Sample velocity at the current position (no interpolation needed here)
-    vec2 vel = imageLoad(u_read_tex, coord).gb;
-
+    vec2 vel = texture(u_read_tex, uv).gb;
     // Trace back in time
-    pos -= dt0 * vel;
-
-    // Clamp to the valid interior grid area, similar to the CPU version
-    pos = clamp(pos, vec2(0.5), vec2(GRID_SIZE - 1.5));
-
-    // Convert back to UV coordinates for interpolated texture lookup
-    vec2 prev_uv = pos / float(GRID_SIZE);
+    vec2 prev_uv = uv - (vel * u_dt / float(GRID_SIZE));
     
-    // Read advected quantity from previous position using linear interpolation
+    // Read advected quantity from previous position
     vec4 advected_data = texture(u_read_tex, prev_uv);
     imageStore(u_write_tex, coord, advected_data);
 }
