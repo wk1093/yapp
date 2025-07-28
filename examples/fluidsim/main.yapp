@@ -5,14 +5,14 @@
 #import <GLFW/glfw3.h>
 
 
-const int GRID_SIZE = 64*3; // Grid resolution (64x64)
+const int GRID_SIZE = 64*1; // Grid resolution (64x64)
 const float DT = 0.1f; // Time step
 const float DIFFUSION = 0.00001f; // Diffusion rate
 const float VISCOSITY = 0.0001f; // Viscosity
-const int WINDOW_SIZE = 64*6; // Window size in pixels
+const int WINDOW_SIZE = 64*4; // Window size in pixels
 const float SCALE = (float)(WINDOW_SIZE) / GRID_SIZE; // Scale factor for rendering
 
-const char* VERTEX_SHADER = R"(#version 330 core
+const char* VERTEX_SHADER = R"(#version 430 core
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aTex;
 
@@ -24,7 +24,7 @@ void main() {
 }
 )";
 
-const char* FRAGMENT_SHADER =R"(#version 330 core
+const char* FRAGMENT_SHADER =R"(#version 430 core
 out vec4 FragColor;
 
 in vec2 TexCoord;
@@ -260,7 +260,7 @@ int main(vec<str> args) {
         return -1;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);

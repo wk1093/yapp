@@ -130,8 +130,8 @@ if (RUN_YAPP_EXAMPLE_FLUIDSIM)
         GIT_REPOSITORY https://github.com/Dav1dde/glad.git
         GIT_TAG        origin/master
     )
-    # set GL version to 3.3
-    set(GLAD_GL_VERSION 3.3)
+    # set GL version to 4.3
+    set(GLAD_GL_VERSION 4.3)
     set(GLAD_PROFILE "core")
     set(GLAD_GENERATE_LOADER ON)
     set(GLAD_GENERATE_C_API ON)
