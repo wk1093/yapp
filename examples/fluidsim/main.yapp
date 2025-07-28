@@ -31,197 +31,134 @@ out vec4 FragColor;
 in vec2 TexCoord;
 uniform sampler2D uSimData; // RGBA32F: r=density, g=u, b=v, a=unused
 
-// HSV to RGB conversion in GLSL
-vec3 hsv2rgb(float h, float s, float v) {
-    float c = v * s;
-    float x = c * (1.0 - abs(mod(h / 60.0, 2.0) - 1.0));
-    float m = v - c;
-    float r, g, b;
-    if (h < 60.0)      { r = c; g = x; b = 0.0; }
-    else if (h < 120.0){ r = x; g = c; b = 0.0; }
-    else if (h < 180.0){ r = 0.0; g = c; b = x; }
-    else if (h < 240.0){ r = 0.0; g = x; b = c; }
-    else if (h < 300.0){ r = x; g = 0.0; b = c; }
-    else               { r = c; g = 0.0; b = x; }
-    return vec3(r + m, g + m, b + m);
-}
-
 void main() {
-    vec4 sim = texture(uSimData, TexCoord);
-    float d = sim.r;
-    float u = sim.g;
-    float v = sim.b;
-    float speed = sqrt(u * u + v * v);
-    d = min(d, 255.0);
-    speed = min(speed, 10.0);
+    // Fetch the simulation data (density in the .r component)
+    float density = texture(uSimData, TexCoord).r;
 
-    // New visualization logic
-    float angle = atan(v, u) * (180.0 / 3.14159265359); // angle in degrees
-    float hue = mod(angle, 360.0);
-    float saturation = 1.0; // Keep saturation high for vibrant colors
-    float brightness = pow(min(d / 150.0, 1.0), 0.8); // Use power for better contrast
+    // Normalize and clamp the density for visualization
+    // The value 255.0 is arbitrary; it can be tuned to make the fluid more/less visible.
+    float color = clamp(density / 100.0, 0.0, 1.0);
 
-    vec3 rgb = hsv2rgb(hue, saturation, brightness);
-    FragColor = vec4(rgb, 1.0);
+    // Output a grayscale color. This is stable and won't flash.
+    FragColor = vec4(color, color, color, 1.0);
 }
 )";
 
 // Helper function to convert 2D grid indices to 1D array index
-int IX(int x, int y) {
-    x = math::max(0, math::min(x, GRID_SIZE - 1));
-    y = math::max(0, math::min(y, GRID_SIZE - 1));
-    return x + y * GRID_SIZE;
+int idx(int x, int y, int width) {
+    return x + y * width;
 }
 
-GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    int length = strlen(source);
-    glShaderSource(shader, 1, &source, &length);
-    glCompileShader(shader);
-
-    // Check for errors
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char log[512];
-        glGetShaderInfoLog(shader, 512, nullptr, log);
-        io::println(io::err, "Shader compilation failed: ", log);
-    }
-
-    return shader;
-}
-
-GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc) {
-    GLuint vertShader = compileShader(GL_VERTEX_SHADER, vertexSrc);
-    GLuint fragShader = compileShader(GL_FRAGMENT_SHADER, fragmentSrc);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertShader);
-    glAttachShader(program, fragShader);
-    glLinkProgram(program);
-
-    // Check for linking errors
-    GLint success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        char log[512];
-        glGetProgramInfoLog(program, 512, nullptr, log);
-        io::println(io::err, "Program linking failed: ", log);
-    }
-
-    glDeleteShader(vertShader);
-    glDeleteShader(fragShader);
-
-    return program;
-}
-
-// New helper function to build shader source with defines
-str build_shader_source(const char* base_code, int grid_size) {
-    str header = "#version 430 core\n";
-    header += "#define GRID_SIZE " + std::to_string(grid_size) + "\n";
-    return header + base_code;
-}
-
-const char* COMPUTE_ADD_FORCE_SHADER_SRC = R"(
+const char* COMPUTE_ADVECT_SHADER_SRC = R"(#version 430 core
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-// Use image2D for read-write access
-layout(binding = 0, rgba32f) uniform image2D u_sim_tex;
 
-uniform vec2 u_point;
-uniform float u_radius;
-uniform vec4 u_value; // .r=density, .g=velX, .b=velY
-
-void main() {
-    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    float dist = distance(vec2(coord), u_point);
-
-    if (dist < u_radius) {
-        vec4 prev_val = imageLoad(u_sim_tex, coord);
-        // Add force with a simple falloff
-        float falloff = 1.0 - dist / u_radius;
-        imageStore(u_sim_tex, coord, prev_val + u_value * falloff);
-    }
-}
-)";
-
-const char* COMPUTE_ADVECT_SHADER_SRC = R"(
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-// Use a sampler for interpolated reads
 layout(binding = 0) uniform sampler2D u_read_tex;
-// Use an image for writing
 layout(binding = 1, rgba32f) uniform writeonly image2D u_write_tex;
 
 uniform float u_dt;
+uniform vec2 u_grid_size;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    
-    // Sample velocity at the current grid point
+    vec2 pos = vec2(coord) / u_grid_size;
+
+    // Read velocity at the current position
     vec2 vel = texelFetch(u_read_tex, coord, 0).gb;
 
-    // Back-trace the position in grid-space, scaled by grid size
-    // In the CPU version, this was dt * (GRID_SIZE - 2). We use GRID_SIZE for simplicity.
-    vec2 prev_pos = vec2(coord) - vel * u_dt * float(GRID_SIZE);
+    // Trace back in time
+    vec2 prev_pos = pos - (vel * u_dt);
 
-    // Convert the back-traced grid position to normalized texture coordinates for sampling
-    // Clamp to stay within the valid grid area for interpolation (0.5 to GRID_SIZE - 1.5)
-    vec2 prev_uv = clamp(prev_pos + 0.5, vec2(0.5), vec2(float(GRID_SIZE) - 1.5)) / float(GRID_SIZE);
-    
-    // Read advected quantity from the previous position using linear interpolation
-    vec4 advected_data = texture(u_read_tex, prev_uv);
-    imageStore(u_write_tex, coord, advected_data);
+    // Bilinear interpolation
+    vec4 data = texture(u_read_tex, prev_pos);
+
+    imageStore(u_write_tex, coord, data);
 }
 )";
 
-const char* COMPUTE_JACOBI_SHADER_SRC = R"(
+const char* COMPUTE_JACOBI_DIFFUSE_SHADER_SRC = R"(#version 430 core
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-// x: current iteration, b: constant term
-layout(binding = 0) uniform sampler2D u_x_tex;
-layout(binding = 1) uniform sampler2D u_b_tex;
-layout(binding = 2, rgba32f) uniform writeonly image2D u_write_tex;
 
-uniform float u_alpha;
-uniform float u_beta_reciprocal;
+layout(binding = 0) uniform sampler2D u_x_read_tex;  // x_k (current iteration value)
+layout(binding = 1) uniform sampler2D u_x0_read_tex; // x0 (initial value)
+layout(binding = 2, rgba32f) uniform writeonly image2D u_x_write_tex; // x_k+1
+
+uniform float u_a;
+uniform float u_c_inv; // 1.0 / c = 1.0 / (1 + 4*a)
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
 
-    // Sample neighbors from the previous iteration's texture (u_x_tex)
-    vec4 x_l = texelFetch(u_x_tex, coord + ivec2(-1, 0), 0);
-    vec4 x_r = texelFetch(u_x_tex, coord + ivec2(1, 0), 0);
-    vec4 x_t = texelFetch(u_x_tex, coord + ivec2(0, 1), 0);
-    vec4 x_b = texelFetch(u_x_tex, coord + ivec2(0, -1), 0);
-    vec4 b   = texelFetch(u_b_tex, coord, 0);
+    // Sample neighbors from the read texture (x_k)
+    vec4 x_l = texelFetch(u_x_read_tex, coord + ivec2(-1, 0), 0);
+    vec4 x_r = texelFetch(u_x_read_tex, coord + ivec2(1, 0), 0);
+    vec4 x_t = texelFetch(u_x_read_tex, coord + ivec2(0, 1), 0);
+    vec4 x_b = texelFetch(u_x_read_tex, coord + ivec2(0, -1), 0);
+    vec4 neighbors_sum = x_l + x_r + x_t + x_b;
 
-    // Jacobi iteration: new_x = (b + alpha * (x_l + x_r + x_t + x_b)) / beta
-    vec4 new_x = (b + u_alpha * (x_l + x_r + x_t + x_b)) * u_beta_reciprocal;
-    imageStore(u_write_tex, coord, new_x);
+    // Sample from the x0 texture
+    vec4 x0 = texelFetch(u_x0_read_tex, coord, 0);
+
+    // Jacobi iteration for diffusion: x_k+1 = (x0 + a * sum(neighbors_k)) / (1 + 4*a)
+    vec4 x_new = (x0 + u_a * neighbors_sum) * u_c_inv;
+
+    imageStore(u_x_write_tex, coord, x_new);
 }
 )";
 
-const char* COMPUTE_DIVERGENCE_SHADER_SRC = R"(
+const char* COMPUTE_JACOBI_FOR_PRESSURE_SHADER_SRC = R"(#version 430 core
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-layout(binding = 0) uniform sampler2D u_vel_tex;
+
+layout(binding = 0) uniform sampler2D u_pressure_read_tex; // p_k
+layout(binding = 1) uniform sampler2D u_divergence_tex;    // b
+layout(binding = 2, rgba32f) uniform writeonly image2D u_pressure_write_tex; // p_k+1
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+
+    // Sample neighbors from the read texture (p_k)
+    float p_l = texelFetch(u_pressure_read_tex, coord + ivec2(-1, 0), 0).r;
+    float p_r = texelFetch(u_pressure_read_tex, coord + ivec2(1, 0), 0).r;
+    float p_t = texelFetch(u_pressure_read_tex, coord + ivec2(0, 1), 0).r;
+    float p_b = texelFetch(u_pressure_read_tex, coord + ivec2(0, -1), 0).r;
+
+    // Sample from the b texture (divergence)
+    float divergence = texelFetch(u_divergence_tex, coord, 0).r;
+
+    // Jacobi iteration for Poisson equation: laplacian(p) = divergence
+    // p_k+1 = (p_l + p_r + p_t + p_b - divergence) / 4.0
+    float p_new = (p_l + p_r + p_t + p_b - divergence) / 4.0;
+
+    // Store new pressure value. Other components are not used.
+    imageStore(u_pressure_write_tex, coord, vec4(p_new, 0, 0, 0));
+}
+)";
+
+
+const char* COMPUTE_DIVERGENCE_SHADER_SRC = R"(#version 430 core
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(binding = 0) uniform sampler2D u_vel_tex; // Vel texture has u in .g, v in .b
 layout(binding = 1, rgba32f) uniform writeonly image2D u_write_tex;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
 
     // Sample velocity components from neighbors
-    float v_l = texelFetch(u_vel_tex, coord + ivec2(-1, 0), 0).g;
-    float v_r = texelFetch(u_vel_tex, coord + ivec2(1, 0), 0).g;
-    float v_t = texelFetch(u_vel_tex, coord + ivec2(0, 1), 0).b;
-    float v_b = texelFetch(u_vel_tex, coord + ivec2(0, -1), 0).b;
+    float u_l = texelFetch(u_vel_tex, coord + ivec2(-1, 0), 0).g; // u at left
+    float u_r = texelFetch(u_vel_tex, coord + ivec2(1, 0), 0).g;  // u at right
+    float v_b = texelFetch(u_vel_tex, coord + ivec2(0, -1), 0).b; // v at bottom
+    float v_t = texelFetch(u_vel_tex, coord + ivec2(0, 1), 0).b;  // v at top
 
-    // Compute divergence, matching CPU version: div = -0.5 * ( (u_r - u_l) + (v_t - v_b) ) / h
-    // Here h = 1, but we scale by GRID_SIZE to match the gradient subtraction.
-    float divergence = -0.5 * (v_r - v_l + v_t - v_b) / float(GRID_SIZE);
+    // Compute divergence using central differences.
+    // div = 0.5 * ( (u_r - u_l)/dx + (v_t - v_b)/dy ).
+    // Since dx=dy=1 in grid space, we get:
+    float divergence = 0.5 * (u_r - u_l + v_t - v_b);
+    
     // Store divergence in .r, clear other channels
     imageStore(u_write_tex, coord, vec4(divergence, 0, 0, 0));
 }
 )";
 
-const char* COMPUTE_SUBTRACT_GRADIENT_SHADER_SRC = R"(
+const char* COMPUTE_SUBTRACT_GRADIENT_SHADER_SRC = R"(#version 430 core
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(binding = 0) uniform sampler2D u_vel_tex;
 layout(binding = 1) uniform sampler2D u_pressure_tex;
@@ -236,148 +173,157 @@ void main() {
     float p_t = texelFetch(u_pressure_tex, coord + ivec2(0, 1), 0).r;
     float p_b = texelFetch(u_pressure_tex, coord + ivec2(0, -1), 0).r;
 
-    // Subtract pressure gradient from velocity, matching CPU: vel -= 0.5 * h * grad(p)
+    // Subtract pressure gradient from velocity.
+    // vel -= grad(p) = 0.5 * (p_r - p_l, p_t - p_b)
     vec4 vel = texelFetch(u_vel_tex, coord, 0);
-    vel.gb -= 0.5 * float(GRID_SIZE) * vec2(p_r - p_l, p_t - p_b);
+    vel.gb -= 0.5 * vec2(p_r - p_l, p_t - p_b);
     imageStore(u_write_tex, coord, vel);
 }
 )";
 
-const char* COMPUTE_BOUNDARY_SHADER_SRC = R"(
+const char* COMPUTE_BOUNDARY_SHADER_SRC = R"(#version 430 core
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-// Use image for read-write to modify in place
-layout(binding = 0, rgba32f) uniform image2D u_tex;
-uniform int u_b; // Boundary condition type: 0=copy, 1=reflect_u, 2=reflect_v
+layout(binding = 0, rgba32f) uniform image2D u_texture;
+
+uniform int u_mode; // 0 for scalar (density/pressure), 1 for u, 2 for v
+uniform ivec2 u_grid_size;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = imageSize(u_tex);
 
-    // Only run on boundary pixels
-    if (coord.x > 0 && coord.x < size.x - 1 && coord.y > 0 && coord.y < size.y - 1) return;
+    // Only operate on boundary pixels
+    if (coord.x == 0 || coord.x == u_grid_size.x - 1 || coord.y == 0 || coord.y == u_grid_size.y - 1) {
+        vec4 val = imageLoad(u_texture, coord);
+        
+        if (u_mode == 0) { // Scalar field (density, pressure)
+            // Neumann boundary (zero gradient)
+            if (coord.x == 0) val = imageLoad(u_texture, ivec2(1, coord.y));
+            if (coord.x == u_grid_size.x - 1) val = imageLoad(u_texture, ivec2(u_grid_size.x - 2, coord.y));
+            if (coord.y == 0) val = imageLoad(u_texture, ivec2(coord.x, 1));
+            if (coord.y == u_grid_size.y - 1) val = imageLoad(u_texture, ivec2(coord.x, u_grid_size.y - 2));
+        } else if (u_mode == 1) { // u-velocity
+            // Reflective boundary for u
+            if (coord.x == 0 || coord.x == u_grid_size.x - 1) val.g = -val.g;
+        } else if (u_mode == 2) { // v-velocity
+            // Reflective boundary for v
+            if (coord.y == 0 || coord.y == u_grid_size.y - 1) val.b = -val.b;
+        }
+        
+        imageStore(u_texture, coord, val);
 
-    // Figure out where to sample from the inside
-    ivec2 inner_coord = clamp(coord, ivec2(1), size - 2);
-    vec4 inner_val = imageLoad(u_tex, inner_coord);
-    vec4 boundary_val = inner_val; // Case b=0: copy value from nearest inner pixel
-    
-    // Reflective (no-slip) boundary for velocity
-    if (u_b == 1 && (coord.x == 0 || coord.x == size.x - 1)) {
-        boundary_val.g = -inner_val.g; // Negate u component
+        // Handle corners
+        if (coord.x == 0 && coord.y == 0) {
+            vec4 val1 = imageLoad(u_texture, ivec2(1, 0));
+            vec4 val2 = imageLoad(u_texture, ivec2(0, 1));
+            imageStore(u_texture, coord, (val1 + val2) * 0.5f);
+        }
+        if (coord.x == u_grid_size.x - 1 && coord.y == 0) {
+            vec4 val1 = imageLoad(u_texture, ivec2(u_grid_size.x - 2, 0));
+            vec4 val2 = imageLoad(u_texture, ivec2(u_grid_size.x - 1, 1));
+            imageStore(u_texture, coord, (val1 + val2) * 0.5f);
+        }
+        if (coord.x == 0 && coord.y == u_grid_size.y - 1) {
+            vec4 val1 = imageLoad(u_texture, ivec2(1, u_grid_size.y - 1));
+            vec4 val2 = imageLoad(u_texture, ivec2(0, u_grid_size.y - 2));
+            imageStore(u_texture, coord, (val1 + val2) * 0.5f);
+        }
+        if (coord.x == u_grid_size.x - 1 && coord.y == u_grid_size.y - 1) {
+            vec4 val1 = imageLoad(u_texture, ivec2(u_grid_size.x - 2, u_grid_size.y - 1));
+            vec4 val2 = imageLoad(u_texture, ivec2(u_grid_size.x - 1, u_grid_size.y - 2));
+            imageStore(u_texture, coord, (val1 + val2) * 0.5f);
+        }
     }
-    if (u_b == 2 && (coord.y == 0 || coord.y == size.y - 1)) {
-        boundary_val.b = -inner_val.b; // Negate v component
-    }
-
-    imageStore(u_tex, coord, boundary_val);
-    
-    // Corners need special handling after edges are set.
-    // A second, simpler shader pass would be ideal, but for this implementation,
-    // we can get an ok result by just setting them based on neighbors.
-    // This part is tricky in a single pass. The CPU version relies on serial execution.
-    // We will omit explicit corner handling in this pass for simplicity and robustness.
-    // The clamp-based approach provides a reasonable approximation.
 }
 )";
+
+GLuint create_texture(int width, int height, GLenum format) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    return tex;
+}
+
+GLuint create_compute_shader(const char* source) {
+    GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        printf("ERROR::SHADER::COMPUTE::COMPILATION_FAILED\n%s\n", infoLog);
+        return 0;
+    }
+    return shader;
+}
 
 
 class Fluid {
 public:
-    // Ping-pong textures for simulation and pressure
-    GLuint sim_tex_a, sim_tex_b;
-    GLuint pressure_tex_a, pressure_tex_b;
-    // Shader programs
-    GLuint advect_shader, jacobi_shader, divergence_shader, subtract_gradient_shader, boundary_shader, add_force_shader;
-    // Fullscreen quad
+    // Simulation parameters
+    int grid_width, grid_height;
+    float dt;
+    float viscosity;
+    float diffusion;
+
+    // OpenGL resources
+    GLuint sim_tex_a, sim_tex_b; // Ping-pong textures for simulation data (density, u, v)
+    GLuint pressure_tex_a, pressure_tex_b; // Ping-pong textures for pressure solve
+    GLuint divergence_tex; // Texture to store divergence field
     GLuint VAO, VBO;
 
-    Fluid() {
-        // Empty constructor
-    }
+    GLuint advect_shader;
+    GLuint jacobi_diffuse_shader;
+    GLuint jacobi_pressure_shader;
+    GLuint divergence_shader;
+    GLuint subtract_gradient_shader;
+    GLuint boundary_shader;
+
+    Fluid(int width, int height, float dt, float viscosity, float diffusion)
+        : grid_width(width), grid_height(height), dt(dt), viscosity(viscosity), diffusion(diffusion) {}
 
     void init() {
-        init_textures();
-        init_shaders();
+        // Create textures
+        sim_tex_a = create_texture(grid_width, grid_height, GL_RGBA32F);
+        sim_tex_b = create_texture(grid_width, grid_height, GL_RGBA32F);
+        pressure_tex_a = create_texture(grid_width, grid_height, GL_R32F);
+        pressure_tex_b = create_texture(grid_width, grid_height, GL_R32F);
+        divergence_tex = create_texture(grid_width, grid_height, GL_R32F);
+
+        // Create compute shaders
+        advect_shader = create_compute_shader(COMPUTE_ADVECT_SHADER_SRC);
+        jacobi_diffuse_shader = create_compute_shader(COMPUTE_JACOBI_DIFFUSE_SHADER_SRC);
+        jacobi_pressure_shader = create_compute_shader(COMPUTE_JACOBI_FOR_PRESSURE_SHADER_SRC);
+        divergence_shader = create_compute_shader(COMPUTE_DIVERGENCE_SHADER_SRC);
+        subtract_gradient_shader = create_compute_shader(COMPUTE_SUBTRACT_GRADIENT_SHADER_SRC);
+        boundary_shader = create_compute_shader(COMPUTE_BOUNDARY_SHADER_SRC);
+
         init_quad();
     }
 
-    void init_textures() {
-        auto create_tex = [this]() {
-            GLuint tex;
-            glGenTextures(1, &tex);
-            glBindTexture(GL_TEXTURE_2D, tex);
-            // Use RGBA32F for high precision
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, GRID_SIZE, GRID_SIZE, 0, GL_RGBA, GL_FLOAT, nullptr);
-            // Use linear filtering for smoother advection
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            
-            // Clear texture using an FBO, as glClearTexImage may not be available
-            GLuint fbo;
-            glGenFramebuffers(1, &fbo);
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
-                glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-                glClear(GL_COLOR_BUFFER_BIT);
-            }
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &fbo);
-
-            return tex;
-        };
-        sim_tex_a = create_tex();
-        sim_tex_b = create_tex();
-        pressure_tex_a = create_tex();
-        pressure_tex_b = create_tex();
-    }
-
-    void clear_texture(GLuint tex) {
+    void clear_texture(GLuint tex, GLenum format) {
         GLuint fbo;
         glGenFramebuffers(1, &fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
-            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+            glClearBufferfv(GL_COLOR, 0, color);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &fbo);
     }
 
-    void init_shaders() {
-        auto create_program = [](const char* src) {
-            str full_src = build_shader_source(src, GRID_SIZE);
-            const char* c_src = full_src.c_str();
-            GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
-            glShaderSource(shader, 1, &c_src, nullptr);
-            glCompileShader(shader);
-            // Error checking...
-            GLint success;
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-            if (!success) {
-                char log[1024];
-                glGetShaderInfoLog(shader, 1024, nullptr, log);
-                io::println(io::err, "Compute shader compilation failed:\n", log);
-            }
-            GLuint program = glCreateProgram();
-            glAttachShader(program, shader);
-            glLinkProgram(program);
-            glDeleteShader(shader);
-            return program;
-        };
-        advect_shader = create_program(COMPUTE_ADVECT_SHADER_SRC);
-        jacobi_shader = create_program(COMPUTE_JACOBI_SHADER_SRC);
-        divergence_shader = create_program(COMPUTE_DIVERGENCE_SHADER_SRC);
-        subtract_gradient_shader = create_program(COMPUTE_SUBTRACT_GRADIENT_SHADER_SRC);
-        boundary_shader = create_program(COMPUTE_BOUNDARY_SHADER_SRC);
-        add_force_shader = create_program(COMPUTE_ADD_FORCE_SHADER_SRC);
-    }
-    
     void init_quad() {
         float quad[] = {
+            // positions   // texCoords
             -1.0f,  1.0f,  0.0f, 1.0f,
             -1.0f, -1.0f,  0.0f, 0.0f,
              1.0f,  1.0f,  1.0f, 1.0f,
@@ -387,151 +333,136 @@ public:
         glGenBuffers(1, &VBO);
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     }
 
-    void swap_sim_textures() { std::swap(sim_tex_a, sim_tex_b); }
-    void swap_pressure_textures() { std::swap(pressure_tex_a, pressure_tex_b); }
+    void add_force(int x, int y, float amount_density, float force_x, float force_y) {
+        // This function is slow, meant for user interaction, not per-frame simulation logic
+        std::vector<float> data(grid_width * grid_height * 4);
+        glBindTexture(GL_TEXTURE_2D, sim_tex_a);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, data.data());
 
-    void dispatch(GLuint shader) {
-        glUseProgram(shader);
-        glDispatchCompute(GRID_SIZE / 8, GRID_SIZE / 8, 1);
-        // Ensure writes are visible to subsequent reads
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+        int center_idx = idx(x, y, grid_width) * 4;
+        data[center_idx + 0] += amount_density; // Add density
+        data[center_idx + 1] += force_x;        // Add u velocity
+        data[center_idx + 2] += force_y;        // Add v velocity
+
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, grid_width, grid_height, GL_RGBA, GL_FLOAT, data.data());
     }
 
-    void add_force(float x, float y, float dx, float dy, float density) {
-        glUseProgram(add_force_shader);
-        // Bind the current simulation texture for read-write
-        glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-        glUniform2f(glGetUniformLocation(add_force_shader, "u_point"), x, y);
-        glUniform1f(glGetUniformLocation(add_force_shader, "u_radius"), 10.0f);
-        
-        // Add density and velocity in one pass
-        glUniform4f(glGetUniformLocation(add_force_shader, "u_value"), density * DT, dx * DT, dy * DT, 0.0f);
-        dispatch(add_force_shader);
+    void set_boundary(int mode, GLuint tex) {
+        glUseProgram(boundary_shader);
+        glUniform1i(glGetUniformLocation(boundary_shader, "u_mode"), mode);
+        glUniform2i(glGetUniformLocation(boundary_shader, "u_grid_size"), grid_width, grid_height);
+        glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     }
 
     void advect() {
         glUseProgram(advect_shader);
-        // Write to B, read from A
+        glUniform1f(glGetUniformLocation(advect_shader, "u_dt"), dt);
+        glUniform2f(glGetUniformLocation(advect_shader, "u_grid_size"), (float)grid_width, (float)grid_height);
+        
+        glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glBindImageTexture(1, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, sim_tex_a);
-        glUniform1i(glGetUniformLocation(advect_shader, "u_read_tex"), 0);
-        glUniform1f(glGetUniformLocation(advect_shader, "u_dt"), DT);
-        dispatch(advect_shader);
-        swap_sim_textures();
+        
+        glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+        std::swap(sim_tex_a, sim_tex_b);
     }
 
     void diffuse(float rate) {
-        if (rate <= 0.0) return;
-        // Equation: x = (x0 + a * sum(neighbors)) / (1 + 4a)
-        // a = rate * dt / dx^2. dx = 1/GRID_SIZE. So a = rate * dt * GRID_SIZE^2
-        float a = rate * DT * GRID_SIZE * GRID_SIZE;
-        glUseProgram(jacobi_shader);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), a);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_beta_reciprocal"), 1.0f / (1.0f + 4.0f * a));
-        
-        // B is the constant term (initial state, x0)
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, sim_tex_a);
-        glUniform1i(glGetUniformLocation(jacobi_shader, "u_b_tex"), 1);
+        if (rate == 0) return;
 
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(glGetUniformLocation(jacobi_shader, "u_x_tex"), 0);
+        float a = dt * rate;
+        float c_inv = 1.0f / (1.0f + 4.0f * a);
+
+        glUseProgram(jacobi_diffuse_shader);
+        glUniform1f(glGetUniformLocation(jacobi_diffuse_shader, "u_a"), a);
+        glUniform1f(glGetUniformLocation(jacobi_diffuse_shader, "u_c_inv"), c_inv);
+        glUniform1i(glGetUniformLocation(jacobi_diffuse_shader, "u_x_read_tex"), 0);
+        glUniform1i(glGetUniformLocation(jacobi_diffuse_shader, "u_x0_read_tex"), 1);
+
+        // Use divergence_tex as temporary storage for x0, since it's RGBA32F and not used here.
+        glCopyImageSubData(sim_tex_a, GL_TEXTURE_2D, 0, 0, 0, 0,
+                           divergence_tex, GL_TEXTURE_2D, 0, 0, 0, 0,
+                           grid_width, grid_height, 1);
 
         for (int i = 0; i < 20; ++i) {
-            // Write to B, read from A
-            glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-            glBindTexture(GL_TEXTURE_2D, sim_tex_a);
-            dispatch(jacobi_shader);
-            swap_sim_textures();
-            // Boundary conditions should be applied to the result of the solve
+            glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F); // x_k
+            glBindImageTexture(1, divergence_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F); // x0
+            glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F); // x_k+1
+            
+            glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+            std::swap(sim_tex_a, sim_tex_b);
+            
             set_boundary(1, sim_tex_a);
             set_boundary(2, sim_tex_a);
         }
     }
 
     void project() {
-        // Calculate divergence of velocity field (read from sim_a, write to pressure_a)
+        // Calculate divergence of velocity field (sim_tex_a) and store in divergence_tex
         glUseProgram(divergence_shader);
-        glBindImageTexture(1, pressure_tex_a, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(divergence_shader, "u_vel_tex"), 0);
-        dispatch(divergence_shader);
-        set_boundary(0, pressure_tex_a);
+        glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, divergence_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+        glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        set_boundary(0, divergence_tex);
 
-        // Clear initial pressure field (p0) to start iteration from zero
-        clear_texture(pressure_tex_b);
+        // Zero out the initial pressure fields
+        clear_texture(pressure_tex_a, GL_R32F);
+        clear_texture(pressure_tex_b, GL_R32F);
 
-        // Solve for pressure: laplacian(p) = div -> 4p - sum(neighbors) = div
-        // p_new = (sum(neighbors) + div) / 4. Our div is pre-negated.
-        glUseProgram(jacobi_shader);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), 1.0f);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_beta_reciprocal"), 1.0f / 4.0f);
-        
-        // Divergence is the constant term 'b'
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, pressure_tex_a);
-        glUniform1i(glGetUniformLocation(jacobi_shader, "u_b_tex"), 1);
-        
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(glGetUniformLocation(jacobi_shader, "u_x_tex"), 0);
+        // Iteratively solve for pressure field using Jacobi method
+        glUseProgram(jacobi_pressure_shader);
+        glUniform1i(glGetUniformLocation(jacobi_pressure_shader, "u_pressure_read_tex"), 0);
+        glUniform1i(glGetUniformLocation(jacobi_pressure_shader, "u_divergence_tex"), 1);
 
         for (int i = 0; i < 20; ++i) {
-            // Write to pressure_b, read from pressure_a
-            glBindImageTexture(2, pressure_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-            glBindTexture(GL_TEXTURE_2D, pressure_tex_a);
-            dispatch(jacobi_shader);
-            swap_pressure_textures();
-            set_boundary(0, pressure_tex_a);
+            glBindImageTexture(0, pressure_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+            glBindImageTexture(1, divergence_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+            glBindImageTexture(2, pressure_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+            glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            
+            set_boundary(0, pressure_tex_b);
+            std::swap(pressure_tex_a, pressure_tex_b);
         }
 
         // Subtract pressure gradient from velocity field
         glUseProgram(subtract_gradient_shader);
-        // Write to sim_b, read from sim_a (velocity) and pressure_a (pressure)
-        glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(subtract_gradient_shader, "u_vel_tex"), 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, pressure_tex_a);
         glUniform1i(glGetUniformLocation(subtract_gradient_shader, "u_pressure_tex"), 1);
-        dispatch(subtract_gradient_shader);
-        swap_sim_textures();
-    }
-    
-    void set_boundary(int b, GLuint tex) {
-        glUseProgram(boundary_shader);
-        glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-        glUniform1i(glGetUniformLocation(boundary_shader, "u_b"), b);
-        dispatch(boundary_shader);
+        glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, pressure_tex_a, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+        glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glDispatchCompute(grid_width / 8, grid_height / 8, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+        std::swap(sim_tex_a, sim_tex_b);
+        set_boundary(1, sim_tex_a);
+        set_boundary(2, sim_tex_a);
     }
 
     void step() {
-        // Add forces (user input) - this is called from the main loop
+        // 1. Diffuse Velocity
+        diffuse(viscosity);
         
-        // A common, stable order for fluid simulation steps:
-        // 1. Advect
-        advect();
-        set_boundary(0, sim_tex_a); // Density
-        set_boundary(1, sim_tex_a); // Velocity u
-        set_boundary(2, sim_tex_a); // Velocity v
-        
-        // 2. Diffuse
-        diffuse(VISCOSITY);
-        // Boundaries are set inside diffuse loop
-
-        // 3. Project
+        // 2. Project to make the flow incompressible
         project();
-        set_boundary(1, sim_tex_a);
-        set_boundary(2, sim_tex_a);
+        
+        // 3. Advect density and velocity fields
+        advect();
     }
 
     void render(GLuint display_shader) {
@@ -543,6 +474,43 @@ public:
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 };
+
+GLuint createShaderProgram(const char* vertexShaderSrc, const char* fragmentShaderSrc) {
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSrc, nullptr);
+    glCompileShader(vertexShader);
+
+    GLint success;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
+        printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
+        return 0;
+    }
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSrc, nullptr);
+    glCompileShader(fragmentShader);
+
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
+        printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
+        return 0;
+    }
+
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return shaderProgram;
+}
 
 int main(vec<str> args) {
     if (!glfwInit()) {
@@ -565,7 +533,7 @@ int main(vec<str> args) {
     glEnable(GL_MULTISAMPLE);
 
 
-    Fluid fluid;
+    Fluid fluid(GRID_SIZE, GRID_SIZE, DT, VISCOSITY, DIFFUSION);
     fluid.init();
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
