@@ -123,7 +123,6 @@ if (RUN_YAPP_TESTS)
 endif()
 
 if (RUN_YAPP_EXAMPLE_FLUIDSIM)
-    find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
     include(FetchContent)
     FetchContent_Declare(
         glad
@@ -143,7 +142,7 @@ if (RUN_YAPP_EXAMPLE_FLUIDSIM)
     set(YAPP_TRANSPILER_FLAGS -- -I${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim -I${CMAKE_CURRENT_SOURCE_DIR}/examples/fluidsim)
     yapp_add_sources(FLUIDSIM_COMPILE_SOURCES "${FLUIDSIM_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim")
     add_executable(yappc_example_fluidsim ${FLUIDSIM_COMPILE_SOURCES})
-    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib sfml-graphics sfml-window sfml-system glad ${GLFW_LIBRARIES} dl)
+    target_link_libraries(yappc_example_fluidsim PUBLIC yapp_stdlib glad ${GLFW_LIBRARIES} dl)
     target_include_directories(yappc_example_fluidsim PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/examples/fluidsim examples/fluidsim)
     add_dependencies(yappc_example_fluidsim yappc_compile)
     # OpenMP
