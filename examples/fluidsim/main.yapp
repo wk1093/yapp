@@ -6,11 +6,11 @@
 #import <GLFW/glfw3.h>
 
 
-const int GRID_SIZE = 64*1; // Grid resolution (64x64)
+const int GRID_SIZE = 64*4; // Grid resolution (64x64)
 const float DT = 0.1f; // Time step
 const float DIFFUSION = 0.00001f; // Diffusion rate
 const float VISCOSITY = 0.0001f; // Viscosity
-const int WINDOW_SIZE = 64*4; // Window size in pixels
+const int WINDOW_SIZE = 64*8; // Window size in pixels
 const float SCALE = (float)(WINDOW_SIZE) / GRID_SIZE; // Scale factor for rendering
 
 const char* VERTEX_SHADER = R"(#version 430 core
@@ -136,9 +136,10 @@ void main() {
     float dist = distance(vec2(coord), u_point);
 
     if (dist < u_radius) {
-        vec4 old_data = imageLoad(u_sim_tex, coord);
+        vec4 prev_val = imageLoad(u_sim_tex, coord);
+        // Add force with a simple falloff
         float falloff = 1.0 - dist / u_radius;
-        imageStore(u_sim_tex, coord, old_data + u_value * falloff);
+        imageStore(u_sim_tex, coord, prev_val + u_value * falloff);
     }
 }
 )";
@@ -148,19 +149,25 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // Use a sampler for interpolated reads
 layout(binding = 0) uniform sampler2D u_read_tex;
 // Use an image for writing
-layout(binding = 0, rgba32f) uniform writeonly image2D u_write_tex;
+layout(binding = 1, rgba32f) uniform writeonly image2D u_write_tex;
 
 uniform float u_dt;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = (vec2(coord) + 0.5) / float(GRID_SIZE);
     
-    vec2 vel = texture(u_read_tex, uv).gb;
-    // Trace back in time
-    vec2 prev_uv = uv - (vel * u_dt / float(GRID_SIZE));
+    // Sample velocity at the current grid point
+    vec2 vel = texelFetch(u_read_tex, coord, 0).gb;
+
+    // Back-trace the position in grid-space, scaled by grid size
+    // In the CPU version, this was dt * (GRID_SIZE - 2). We use GRID_SIZE for simplicity.
+    vec2 prev_pos = vec2(coord) - vel * u_dt * float(GRID_SIZE);
+
+    // Convert the back-traced grid position to normalized texture coordinates for sampling
+    // Clamp to stay within the valid grid area for interpolation (0.5 to GRID_SIZE - 1.5)
+    vec2 prev_uv = clamp(prev_pos + 0.5, vec2(0.5), vec2(float(GRID_SIZE) - 1.5)) / float(GRID_SIZE);
     
-    // Read advected quantity from previous position
+    // Read advected quantity from the previous position using linear interpolation
     vec4 advected_data = texture(u_read_tex, prev_uv);
     imageStore(u_write_tex, coord, advected_data);
 }
@@ -171,24 +178,22 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // x: current iteration, b: constant term
 layout(binding = 0) uniform sampler2D u_x_tex;
 layout(binding = 1) uniform sampler2D u_b_tex;
-layout(binding = 0, rgba32f) uniform writeonly image2D u_write_tex;
+layout(binding = 2, rgba32f) uniform writeonly image2D u_write_tex;
 
 uniform float u_alpha;
 uniform float u_beta_reciprocal;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = (vec2(coord) + 0.5) / float(GRID_SIZE);
-    vec2 texel_size = vec2(1.0 / float(GRID_SIZE));
 
-    // Sample neighbors
-    vec4 x_l = texture(u_x_tex, uv - vec2(texel_size.x, 0));
-    vec4 x_r = texture(u_x_tex, uv + vec2(texel_size.x, 0));
-    vec4 x_t = texture(u_x_tex, uv + vec2(0, texel_size.y));
-    vec4 x_b = texture(u_x_tex, uv - vec2(0, texel_size.y));
-    vec4 b = texture(u_b_tex, uv);
+    // Sample neighbors from the previous iteration's texture (u_x_tex)
+    vec4 x_l = texelFetch(u_x_tex, coord + ivec2(-1, 0), 0);
+    vec4 x_r = texelFetch(u_x_tex, coord + ivec2(1, 0), 0);
+    vec4 x_t = texelFetch(u_x_tex, coord + ivec2(0, 1), 0);
+    vec4 x_b = texelFetch(u_x_tex, coord + ivec2(0, -1), 0);
+    vec4 b   = texelFetch(u_b_tex, coord, 0);
 
-    // Jacobi iteration
+    // Jacobi iteration: new_x = (b + alpha * (x_l + x_r + x_t + x_b)) / beta
     vec4 new_x = (b + u_alpha * (x_l + x_r + x_t + x_b)) * u_beta_reciprocal;
     imageStore(u_write_tex, coord, new_x);
 }
@@ -197,21 +202,20 @@ void main() {
 const char* COMPUTE_DIVERGENCE_SHADER_SRC = R"(
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(binding = 0) uniform sampler2D u_vel_tex;
-layout(binding = 0, rgba32f) uniform writeonly image2D u_write_tex;
+layout(binding = 1, rgba32f) uniform writeonly image2D u_write_tex;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = (vec2(coord) + 0.5) / float(GRID_SIZE);
-    vec2 texel_size = vec2(1.0 / float(GRID_SIZE));
 
     // Sample velocity components from neighbors
-    float v_l = texture(u_vel_tex, uv - vec2(texel_size.x, 0)).g;
-    float v_r = texture(u_vel_tex, uv + vec2(texel_size.x, 0)).g;
-    float v_t = texture(u_vel_tex, uv + vec2(0, texel_size.y)).b;
-    float v_b = texture(u_vel_tex, uv - vec2(0, texel_size.y)).b;
+    float v_l = texelFetch(u_vel_tex, coord + ivec2(-1, 0), 0).g;
+    float v_r = texelFetch(u_vel_tex, coord + ivec2(1, 0), 0).g;
+    float v_t = texelFetch(u_vel_tex, coord + ivec2(0, 1), 0).b;
+    float v_b = texelFetch(u_vel_tex, coord + ivec2(0, -1), 0).b;
 
-    // Compute divergence
-    float divergence = 0.5 * (v_r - v_l + v_t - v_b);
+    // Compute divergence, matching CPU version: div = -0.5 * ( (u_r - u_l) + (v_t - v_b) ) / h
+    // Here h = 1, but we scale by GRID_SIZE to match the gradient subtraction.
+    float divergence = -0.5 * (v_r - v_l + v_t - v_b) / float(GRID_SIZE);
     // Store divergence in .r, clear other channels
     imageStore(u_write_tex, coord, vec4(divergence, 0, 0, 0));
 }
@@ -221,22 +225,20 @@ const char* COMPUTE_SUBTRACT_GRADIENT_SHADER_SRC = R"(
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(binding = 0) uniform sampler2D u_vel_tex;
 layout(binding = 1) uniform sampler2D u_pressure_tex;
-layout(binding = 0, rgba32f) uniform writeonly image2D u_write_tex;
+layout(binding = 2, rgba32f) uniform writeonly image2D u_write_tex;
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = (vec2(coord) + 0.5) / float(GRID_SIZE);
-    vec2 texel_size = vec2(1.0 / float(GRID_SIZE));
 
     // Sample pressure from neighbors
-    float p_l = texture(u_pressure_tex, uv - vec2(texel_size.x, 0)).r;
-    float p_r = texture(u_pressure_tex, uv + vec2(texel_size.x, 0)).r;
-    float p_t = texture(u_pressure_tex, uv + vec2(0, texel_size.y)).r;
-    float p_b = texture(u_pressure_tex, uv - vec2(0, texel_size.y)).r;
+    float p_l = texelFetch(u_pressure_tex, coord + ivec2(-1, 0), 0).r;
+    float p_r = texelFetch(u_pressure_tex, coord + ivec2(1, 0), 0).r;
+    float p_t = texelFetch(u_pressure_tex, coord + ivec2(0, 1), 0).r;
+    float p_b = texelFetch(u_pressure_tex, coord + ivec2(0, -1), 0).r;
 
-    // Subtract pressure gradient from velocity
-    vec4 vel = texture(u_vel_tex, uv);
-    vel.gb -= 0.5 * vec2(p_r - p_l, p_t - p_b);
+    // Subtract pressure gradient from velocity, matching CPU: vel -= 0.5 * h * grad(p)
+    vec4 vel = texelFetch(u_vel_tex, coord, 0);
+    vel.gb -= 0.5 * float(GRID_SIZE) * vec2(p_r - p_l, p_t - p_b);
     imageStore(u_write_tex, coord, vel);
 }
 )";
@@ -245,6 +247,7 @@ const char* COMPUTE_BOUNDARY_SHADER_SRC = R"(
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 // Use image for read-write to modify in place
 layout(binding = 0, rgba32f) uniform image2D u_tex;
+uniform int u_b; // Boundary condition type: 0=copy, 1=reflect_u, 2=reflect_v
 
 void main() {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
@@ -253,19 +256,27 @@ void main() {
     // Only run on boundary pixels
     if (coord.x > 0 && coord.x < size.x - 1 && coord.y > 0 && coord.y < size.y - 1) return;
 
+    // Figure out where to sample from the inside
     ivec2 inner_coord = clamp(coord, ivec2(1), size - 2);
     vec4 inner_val = imageLoad(u_tex, inner_coord);
-    vec4 boundary_val = inner_val; // Start with zero-gradient for density
+    vec4 boundary_val = inner_val; // Case b=0: copy value from nearest inner pixel
     
     // Reflective (no-slip) boundary for velocity
-    if (coord.x == 0 || coord.x == size.x - 1) {
-        boundary_val.g = -inner_val.g; // Flip x-velocity
+    if (u_b == 1 && (coord.x == 0 || coord.x == size.x - 1)) {
+        boundary_val.g = -inner_val.g; // Negate u component
     }
-    if (coord.y == 0 || coord.y == size.y - 1) {
-        boundary_val.b = -inner_val.b; // Flip y-velocity
+    if (u_b == 2 && (coord.y == 0 || coord.y == size.y - 1)) {
+        boundary_val.b = -inner_val.b; // Negate v component
     }
 
     imageStore(u_tex, coord, boundary_val);
+    
+    // Corners need special handling after edges are set.
+    // A second, simpler shader pass would be ideal, but for this implementation,
+    // we can get an ok result by just setting them based on neighbors.
+    // This part is tricky in a single pass. The CPU version relies on serial execution.
+    // We will omit explicit corner handling in this pass for simplicity and robustness.
+    // The clamp-based approach provides a reasonable approximation.
 }
 )";
 
@@ -291,7 +302,7 @@ public:
     }
 
     void init_textures() {
-        auto create_tex = []() {
+        auto create_tex = [this]() {
             GLuint tex;
             glGenTextures(1, &tex);
             glBindTexture(GL_TEXTURE_2D, tex);
@@ -321,6 +332,19 @@ public:
         sim_tex_b = create_tex();
         pressure_tex_a = create_tex();
         pressure_tex_b = create_tex();
+    }
+
+    void clear_texture(GLuint tex) {
+        GLuint fbo;
+        glGenFramebuffers(1, &fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &fbo);
     }
 
     void init_shaders() {
@@ -385,23 +409,17 @@ public:
         // Bind the current simulation texture for read-write
         glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
         glUniform2f(glGetUniformLocation(add_force_shader, "u_point"), x, y);
-        glUniform1f(glGetUniformLocation(add_force_shader, "u_radius"), 5.0f);
+        glUniform1f(glGetUniformLocation(add_force_shader, "u_radius"), 10.0f);
         
-        // Add density and velocity in separate passes
-        if (density > 0.0f) {
-            glUniform4f(glGetUniformLocation(add_force_shader, "u_value"), density, 0.0f, 0.0f, 0.0f);
-            dispatch(add_force_shader);
-        }
-        if (dx != 0.0f || dy != 0.0f) {
-            glUniform4f(glGetUniformLocation(add_force_shader, "u_value"), 0.0f, dx, dy, 0.0f);
-            dispatch(add_force_shader);
-        }
+        // Add density and velocity in one pass
+        glUniform4f(glGetUniformLocation(add_force_shader, "u_value"), density * DT, dx * DT, dy * DT, 0.0f);
+        dispatch(add_force_shader);
     }
 
     void advect() {
         glUseProgram(advect_shader);
         // Write to B, read from A
-        glBindImageTexture(0, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(advect_shader, "u_read_tex"), 0);
@@ -412,12 +430,14 @@ public:
 
     void diffuse(float rate) {
         if (rate <= 0.0) return;
-        float alpha = (GRID_SIZE * GRID_SIZE) / (rate * DT);
+        // Equation: x = (x0 + a * sum(neighbors)) / (1 + 4a)
+        // a = rate * dt / dx^2. dx = 1/GRID_SIZE. So a = rate * dt * GRID_SIZE^2
+        float a = rate * DT * GRID_SIZE * GRID_SIZE;
         glUseProgram(jacobi_shader);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), alpha);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_beta_reciprocal"), 1.0f / (4.0f + alpha));
+        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), a);
+        glUniform1f(glGetUniformLocation(jacobi_shader, "u_beta_reciprocal"), 1.0f / (1.0f + 4.0f * a));
         
-        // B is the constant term (initial state)
+        // B is the constant term (initial state, x0)
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(jacobi_shader, "u_b_tex"), 1);
@@ -427,25 +447,33 @@ public:
 
         for (int i = 0; i < 20; ++i) {
             // Write to B, read from A
-            glBindImageTexture(0, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
             glBindTexture(GL_TEXTURE_2D, sim_tex_a);
             dispatch(jacobi_shader);
             swap_sim_textures();
+            // Boundary conditions should be applied to the result of the solve
+            set_boundary(1, sim_tex_a);
+            set_boundary(2, sim_tex_a);
         }
     }
 
     void project() {
         // Calculate divergence of velocity field (read from sim_a, write to pressure_a)
         glUseProgram(divergence_shader);
-        glBindImageTexture(0, pressure_tex_a, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, pressure_tex_a, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(divergence_shader, "u_vel_tex"), 0);
         dispatch(divergence_shader);
+        set_boundary(0, pressure_tex_a);
 
-        // Solve for pressure (Jacobi)
+        // Clear initial pressure field (p0) to start iteration from zero
+        clear_texture(pressure_tex_b);
+
+        // Solve for pressure: laplacian(p) = div -> 4p - sum(neighbors) = div
+        // p_new = (sum(neighbors) + div) / 4. Our div is pre-negated.
         glUseProgram(jacobi_shader);
-        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), -GRID_SIZE * GRID_SIZE);
+        glUniform1f(glGetUniformLocation(jacobi_shader, "u_alpha"), 1.0f);
         glUniform1f(glGetUniformLocation(jacobi_shader, "u_beta_reciprocal"), 1.0f / 4.0f);
         
         // Divergence is the constant term 'b'
@@ -458,16 +486,17 @@ public:
 
         for (int i = 0; i < 20; ++i) {
             // Write to pressure_b, read from pressure_a
-            glBindImageTexture(0, pressure_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            glBindImageTexture(2, pressure_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
             glBindTexture(GL_TEXTURE_2D, pressure_tex_a);
             dispatch(jacobi_shader);
             swap_pressure_textures();
+            set_boundary(0, pressure_tex_a);
         }
 
         // Subtract pressure gradient from velocity field
         glUseProgram(subtract_gradient_shader);
         // Write to sim_b, read from sim_a (velocity) and pressure_a (pressure)
-        glBindImageTexture(0, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(2, sim_tex_b, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, sim_tex_a);
         glUniform1i(glGetUniformLocation(subtract_gradient_shader, "u_vel_tex"), 0);
@@ -478,28 +507,31 @@ public:
         swap_sim_textures();
     }
     
-    void set_boundary() {
+    void set_boundary(int b, GLuint tex) {
         glUseProgram(boundary_shader);
-        glBindImageTexture(0, sim_tex_a, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        glUniform1i(glGetUniformLocation(boundary_shader, "u_b"), b);
         dispatch(boundary_shader);
     }
 
     void step() {
-        // Advect velocity and density
+        // Add forces (user input) - this is called from the main loop
+        
+        // A common, stable order for fluid simulation steps:
+        // 1. Advect
         advect();
-        set_boundary();
+        set_boundary(0, sim_tex_a); // Density
+        set_boundary(1, sim_tex_a); // Velocity u
+        set_boundary(2, sim_tex_a); // Velocity v
         
-        // Diffuse velocity (viscosity)
+        // 2. Diffuse
         diffuse(VISCOSITY);
-        set_boundary();
+        // Boundaries are set inside diffuse loop
 
-        // Make velocity field mass-conserving
+        // 3. Project
         project();
-        set_boundary();
-        
-        // Diffuse density
-        diffuse(DIFFUSION);
-        set_boundary();
+        set_boundary(1, sim_tex_a);
+        set_boundary(2, sim_tex_a);
     }
 
     void render(GLuint display_shader) {
@@ -539,51 +571,56 @@ int main(vec<str> args) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     GLuint shaderProgram = createShaderProgram(VERTEX_SHADER, FRAGMENT_SHADER);
     
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+        // Measure speed
+        double currentTime = glfwGetTime();
+        nbFrames++;
+        if (currentTime - lastTime >= 1.0) { // If last print was more than 1 sec ago
+            char title[256];
+            sprintf(title, "Fluid Sim - %.2f ms/frame", 1000.0/double(nbFrames));
+            glfwSetWindowTitle(window, title);
+            nbFrames = 0;
+            lastTime += 1.0;
+        }
 
         static double prevMouseX = 0.0, prevMouseY = 0.0;
+        static bool firstMouse = true;
 
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             double mouseX, mouseY;
             glfwGetCursorPos(window, &mouseX, &mouseY);
             mouseY = WINDOW_SIZE - mouseY; // Invert Y coordinate
 
-            float x = mouseX / SCALE;
-            float y = mouseY / SCALE;
+            if (firstMouse) {
+                prevMouseX = mouseX;
+                prevMouseY = mouseY;
+                firstMouse = false;
+            }
+
+            float x = static_cast<float>(mouseX / SCALE);
+            float y = static_cast<float>(mouseY / SCALE);
 
             if (x >= 1 && x < GRID_SIZE - 1 && y >= 1 && y < GRID_SIZE - 1) {
                 float dx = static_cast<float>(mouseX - prevMouseX);
                 float dy = static_cast<float>(mouseY - prevMouseY);
-
-                const float maxSpeed = 10.0f;
-                float len = math::sqrt(dx * dx + dy * dy);
-                if (len > maxSpeed) {
-                    dx = dx / len * maxSpeed;
-                    dy = dy / len * maxSpeed;
-                }
-
-                const float densityStrength = 300.0f;
-                const float velocityStrength = 15.0f;
-                
-                fluid.add_force(x, y, dx * velocityStrength, dy * velocityStrength, densityStrength);
+                fluid.add_force(x, y, dx * 5.0f, dy * 5.0f, 150.0f);
             }
 
             prevMouseX = mouseX;
             prevMouseY = mouseY;
         } else {
-            glfwGetCursorPos(window, &prevMouseX, &prevMouseY);
+            firstMouse = true;
         }
 
         fluid.step();
-        
+
         glClear(GL_COLOR_BUFFER_BIT);
         fluid.render(shaderProgram);
-
         glfwSwapBuffers(window);
-
-        // sleep
-        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
+        glfwPollEvents();
     }
 
     glfwDestroyWindow(window);
